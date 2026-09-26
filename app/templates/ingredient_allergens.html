@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block title %}Allergene: {{ ingredient.name_canonical }}{% endblock %}
+{% block content %}
+<h1>Allergene: {{ ingredient.name_canonical }}</h1>
+
+{% if flash %}
+<div class="flash">{{ flash }}</div>
+{% endif %}
+
+<div class="glass-card">
+<form method="post" action="/zutaten/{{ ingredient.id }}/allergene">
+  <p style="color:var(--fg-muted);margin-bottom:0.75rem">EU-14 Hauptallergene fuer diese Zutat markieren.</p>
+  <div class="allergen-checkbox-grid">
+    {% for allergen in eu14_allergens %}
+    <label class="allergen-check-label">
+      <input type="checkbox" name="allergens[]" value="{{ allergen.key }}"
+             {{ "checked" if allergen.key in ingredient.allergens else "" }}>
+      <span>{{ allergen.label }}</span>
+    </label>
+    {% endfor %}
+  </div>
+  <button type="submit" style="margin-top:1rem">Allergene speichern</button>
+</form>
+</div>
+
+<p style="margin-top:1rem"><a href="/zutaten">Zurueck zur Zutatenliste</a></p>
+{% endblock %}

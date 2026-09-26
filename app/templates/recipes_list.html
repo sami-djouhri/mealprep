@@ -1,0 +1,145 @@
+{% extends "base.html" %}
+{% block title %}Rezepte{% endblock %}
+{% block content %}
+<h1>Rezepte</h1>
+
+{% if flash %}
+<div class="flash">{{ flash }}</div>
+{% endif %}
+
+<form class="search-bar" method="get" action="/rezepte">
+  <input type="text" name="q" value="{{ q }}" placeholder="Rezept suchen...">
+  {% if tags_active %}
+  <input type="hidden" name="tags" value="{{ tags_active }}">
+  {% endif %}
+  {% if max_time %}
+  <input type="hidden" name="max_time" value="{{ max_time }}">
+  {% endif %}
+  {% if max_kcal %}
+  <input type="hidden" name="max_kcal" value="{{ max_kcal }}">
+  {% endif %}
+  <button type="submit">Suchen</button>
+</form>
+
+{% if all_tags %}
+<div class="filter-bar">
+  <span class="filter-label">Tags:</span>
+  <div class="filter-group">
+    {% for tag in all_tags %}
+    <a href="/rezepte?q={{ q }}&tags={{ tag }}{% if max_time %}&max_time={{ max_time }}{% endif %}{% if max_kcal %}&max_kcal={{ max_kcal }}{% endif %}"
+       class="filter-chip {% if tags_active and tag in tags_active.split(',') %}active{% endif %}">{{ tag }}</a>
+    {% endfor %}
+  </div>
+</div>
+
+<div class="filter-bar">
+  <span class="filter-label">Kochzeit:</span>
+  <div class="filter-group">
+    {% for t in [10, 15, 20, 30] %}
+    <a href="/rezepte?q={{ q }}{% if tags_active %}&tags={{ tags_active }}{% endif %}&max_time={{ t }}{% if max_kcal %}&max_kcal={{ max_kcal }}{% endif %}"
+       class="filter-chip {% if max_time == t %}active{% endif %}">{{ t }} min</a>
+    {% endfor %}
+    {% if max_time %}
+    <a href="/rezepte?q={{ q }}{% if tags_active %}&tags={{ tags_active }}{% endif %}{% if max_kcal %}&max_kcal={{ max_kcal }}{% endif %}"
+       class="filter-chip">Alle</a>
+    {% endif %}
+  </div>
+
+  <span class="filter-label" style="margin-left:0.75rem">Kalorien:</span>
+  <div class="filter-group">
+    {% for k in [500, 700, 900] %}
+    <a href="/rezepte?q={{ q }}{% if tags_active %}&tags={{ tags_active }}{% endif %}{% if max_time %}&max_time={{ max_time }}{% endif %}&max_kcal={{ k }}"
+       class="filter-chip {% if max_kcal == k %}active{% endif %}">{{ k }} kcal</a>
+    {% endfor %}
+    {% if max_kcal %}
+    <a href="/rezepte?q={{ q }}{% if tags_active %}&tags={{ tags_active }}{% endif %}{% if max_time %}&max_time={{ max_time }}{% endif %}"
+       class="filter-chip">Alle</a>
+    {% endif %}
+  </div>
+</div>
+{% endif %}
+
+<p style="margin-bottom:1rem">
+  <a class="btn" href="/rezepte/neu">Neues Rezept</a>
+  <a class="btn-secondary" href="/zutaten" style="margin-left:0.5rem">Zutaten &amp; Allergene</a>
+  {% if show_hidden %}
+  <a class="btn-secondary" href="/rezepte" style="margin-left:0.5rem">Ausgeblendete verbergen</a>
+  {% elif hidden_count %}
+  <a class="btn-secondary" href="/rezepte?show_hidden=1" style="margin-left:0.5rem">Ausgeblendete anzeigen ({{ hidden_count }})</a>
+  {% endif %}
+</p>
+
+{% if recipes %}
+<div class="recipe-cards">
+  {% for r in recipes %}
+  <a class="recipe-card" href="/rezepte/{{ r.id }}" style="animation-delay:{{ loop.index0 * 0.06 }}s">
+    <canvas data-recipe-name="{{ r.name }}"
+            data-recipe-tags="{{ r.tags | join(',') if r.tags else '' }}"
+            data-recipe-categories="{{ r.ingredient_categories | join(',') if r.ingredient_categories else '' }}"
+            style="width:100%;height:160px"></canvas>
+    <div class="recipe-card-body">
+      <h3>{{ r.name }}
+        {% if r.hidden %}<span class="badge" style="opacity:.7">ausgeblendet</span>{% endif %}
+        <button type="button" class="badge recipe-hide-btn" style="float:right;cursor:pointer;border:0"
+                data-recipe-id="{{ r.id }}" data-hidden="{{ 1 if r.hidden else 0 }}"
+                title="{{ 'Wieder vorschlagen' if r.hidden else 'Nicht mehr vorschlagen' }}">
+          {{ '&#x21bb;' if r.hidden else '&#x2715;' }}
+        </button>
+      </h3>
+      {% set gm = goal_match_map.get(r.id) if goal_match_map else None %}
+      {% if gm %}
+      <div class="recipe-goal-info">
+        {% if gm.goal_match_pct >= 70 %}
+        <span class="goal-match-badge high">{{ gm.goal_match_pct }}% Match</span>
+        {% elif gm.goal_match_pct >= 40 %}
+        <span class="goal-match-badge mid">{{ gm.goal_match_pct }}% Match</span>
+        {% else %}
+        <span class="goal-match-badge low">{{ gm.goal_match_pct }}% Match</span>
+        {% endif %}
+        <span>{{ gm.macro_balance }}</span>
+      </div>
+      {% endif %}
+      {% if r.tags %}
+      <ul class="tag-list">
+        {% for t in r.tags %}
+        <li><span class="badge">{{ t }}</span></li>
+        {% endfor %}
+      </ul>
+      {% endif %}
+      {% set recipe_allergens = allergen_map.get(r.id, []) if allergen_map else [] %}
+      {% if recipe_allergens %}
+      <div class="allergen-badges">
+        {% for a in recipe_allergens %}
+        <span class="allergen-badge">{{ a }}</span>
+        {% endfor %}
+      </div>
+      {% endif %}
+      <p class="meta">
+        {% if r.nutrition_per_portion %}
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></svg>
+          {{ r.nutrition_per_portion.kcal | int }} kcal &middot;
+          {{ r.nutrition_per_portion.protein_g | round(1) }}g P &middot;
+        {% endif %}
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        {{ r.cook_time_min }} min &middot;
+        {{ r.portions_default }} {{ "Portion" if r.portions_default == 1 else "Portionen" }}
+      </p>
+    </div>
+  </a>
+  {% endfor %}
+</div>
+{% else %}
+<p style="color:var(--fg-muted)">Keine Rezepte gefunden.</p>
+{% endif %}
+<script>
+document.querySelectorAll('.recipe-hide-btn').forEach(function (btn) {
+  btn.addEventListener('click', function (e) {
+    e.preventDefault(); e.stopPropagation();
+    var id = btn.dataset.recipeId;
+    var hidden = btn.dataset.hidden === '1';
+    fetch('/recipes/' + id + '/hide', { method: hidden ? 'DELETE' : 'POST' })
+      .then(function (r) { if (r.ok) location.reload(); });
+  });
+});
+</script>
+{% endblock %}

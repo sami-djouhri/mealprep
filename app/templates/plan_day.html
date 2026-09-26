@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block title %}Plan – {{ target_date }}{% endblock %}
+{% block content %}
+<h1>Tagesplan – {{ target_date }}</h1>
+{% if decisions %}
+  {% for d in decisions %}
+  <div class="card">
+    <h3>{{ d.selected_recipe_name }}</h3>
+    <ul>
+      {% for r in d.explanation %}
+      <li>{{ r }}</li>
+      {% endfor %}
+    </ul>
+    <details>
+      <summary>Score-Breakdown</summary>
+      <pre>{{ d.score_breakdown | tojson(indent=2) }}</pre>
+    </details>
+  </div>
+  {% endfor %}
+{% else %}
+  <p>Keine Entscheidungen getroffen.</p>
+{% endif %}
+<a href="/">Zurueck</a>
+{% endblock %}

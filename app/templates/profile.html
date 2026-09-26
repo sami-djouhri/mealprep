@@ -1,0 +1,219 @@
+{% extends "base.html" %}
+{% block title %}Profil{% endblock %}
+{% block content %}
+<h1>Profil</h1>
+
+{% if flash %}
+<div class="flash">{{ flash }}</div>
+{% endif %}
+
+{% if targets %}
+<div class="goal-hero">
+  <span class="goal-phase-badge {{ goal_phase_class }}">{{ goal_phase_label }}</span>
+  <div class="goal-statement">{{ goal_statement }}</div>
+  <p style="font-size:0.85rem;color:var(--fg-muted);margin-bottom:0.75rem">{{ deficit_or_surplus }}</p>
+  <div class="macro-split-bar">
+    <div class="macro-split-segment macro-split-protein" style="width:{{ protein_pct }}%">{{ protein_pct }}%</div>
+    <div class="macro-split-segment macro-split-carbs" style="width:{{ carbs_pct }}%">{{ carbs_pct }}%</div>
+    <div class="macro-split-segment macro-split-fat" style="width:{{ fat_pct }}%">{{ fat_pct }}%</div>
+  </div>
+  <div class="macro-split-legend">
+    <span class="legend-protein">Protein {{ targets.protein_g | round(0) | int }}g</span>
+    <span class="legend-carbs">Kohlenhydrate {{ targets.carbs_g | round(0) | int }}g</span>
+    <span class="legend-fat">Fett {{ targets.fat_g | round(0) | int }}g</span>
+  </div>
+</div>
+{% endif %}
+
+<form method="post" action="/profil/koerperdaten">
+<section>
+  <h2>Koerperdaten</h2>
+  <div class="glass-card">
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.75rem;">
+      <div>
+        <label for="height_cm">Groesse (cm)</label>
+        <input type="number" id="height_cm" name="height_cm" step="0.1" min="100" max="250" value="{{ profile.height_cm }}" required>
+      </div>
+      <div>
+        <label for="weight_kg">Gewicht (kg)</label>
+        <input type="number" id="weight_kg" name="weight_kg" step="0.1" min="30" max="300" value="{{ profile.weight_kg }}" required>
+      </div>
+      <div>
+        <label for="sex">Geschlecht</label>
+        <select id="sex" name="sex">
+          <option value="male" {{ "selected" if profile.sex == "male" }}>Maennlich</option>
+          <option value="female" {{ "selected" if profile.sex == "female" }}>Weiblich</option>
+        </select>
+      </div>
+      <div>
+        <label for="birth_date">Geburtsdatum</label>
+        <input type="date" id="birth_date" name="birth_date" value="{{ profile.birth_date.isoformat() if profile.birth_date else '' }}">
+      </div>
+      <div>
+        <label for="body_fat_pct">Koerperfett (%)</label>
+        <input type="number" id="body_fat_pct" name="body_fat_pct" step="0.1" min="1" max="60" value="{{ profile.body_fat_pct if profile.body_fat_pct is not none else '' }}" placeholder="optional">
+      </div>
+      <div>
+        <label for="waist_cm">Taillenumfang (cm)</label>
+        <input type="number" id="waist_cm" name="waist_cm" step="0.1" min="40" max="200" value="{{ profile.waist_cm if profile.waist_cm is not none else '' }}" placeholder="optional">
+      </div>
+      <div>
+        <label for="activity_level">Aktivitaetslevel</label>
+        <select id="activity_level" name="activity_level">
+          <option value="sedentary" {{ "selected" if profile.activity_level == "sedentary" }}>Sitzend (1.2)</option>
+          <option value="light" {{ "selected" if profile.activity_level == "light" }}>Leicht aktiv (1.375)</option>
+          <option value="moderate" {{ "selected" if profile.activity_level == "moderate" }}>Moderat (1.55)</option>
+          <option value="active" {{ "selected" if profile.activity_level == "active" }}>Aktiv (1.725)</option>
+          <option value="very_active" {{ "selected" if profile.activity_level == "very_active" }}>Sehr aktiv (1.9)</option>
+        </select>
+      </div>
+      <div>
+        <label for="target_weight_kg">Zielgewicht (kg)</label>
+        <input type="number" id="target_weight_kg" name="target_weight_kg" step="0.1" min="30" max="300" value="{{ profile.target_weight_kg if profile.target_weight_kg is not none else '' }}" placeholder="optional">
+      </div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <h2>Energiebedarf</h2>
+  <dl class="profile-grid">
+    <dt>BMR (Grundumsatz)</dt><dd>{{ bmr }} kcal</dd>
+    <dt>TDEE (Gesamtumsatz)</dt><dd>{{ tdee }} kcal</dd>
+  </dl>
+</section>
+
+{% if targets %}
+<section>
+  <h2>Tagesziele</h2>
+  <div class="targets-grid">
+    <div class="target-box">
+      <div class="value">{{ targets.kcal | round(0) | int }}</div>
+      <div class="label">kcal</div>
+    </div>
+    <div class="target-box">
+      <div class="value">{{ targets.protein_g | round(0) | int }}</div>
+      <div class="label">Protein (g)</div>
+    </div>
+    <div class="target-box">
+      <div class="value">{{ targets.carbs_g | round(0) | int }}</div>
+      <div class="label">Kohlenhydrate (g)</div>
+    </div>
+    <div class="target-box">
+      <div class="value">{{ targets.fat_g | round(0) | int }}</div>
+      <div class="label">Fett (g)</div>
+    </div>
+    <div class="target-box">
+      <div class="value">{{ targets.fiber_g | round(0) | int }}</div>
+      <div class="label">Ballaststoffe (g)</div>
+    </div>
+  </div>
+  <div class="glass-card" style="margin-top:0.75rem">
+    <label for="kcal_target_override">kcal-Ziel ueberschreiben</label>
+    <input type="number" id="kcal_target_override" name="kcal_target_override" min="800" max="8000" value="{{ profile.kcal_target_override if profile.kcal_target_override is not none else '' }}" placeholder="leer = automatisch aus TDEE">
+    <p style="font-size:0.78rem;color:var(--fg-muted);margin-top:-0.5rem">Wenn gesetzt, wird dieses kcal-Ziel statt des berechneten TDEE-Werts verwendet. Protein/Kohlenhydrate/Fett werden entsprechend angepasst.</p>
+  </div>
+</section>
+{% endif %}
+
+<section>
+  <h2>Allergien &amp; Unvertraeglichkeiten</h2>
+  <p style="color:var(--fg-muted);margin-bottom:0.75rem">Rezepte mit Zutaten, die diese Allergene enthalten, werden bei der Planung automatisch ausgeschlossen (EU-14 Hauptallergene).</p>
+  <div class="glass-card">
+    <h3 style="font-size:0.95rem;margin-bottom:0.5rem">Allergien</h3>
+    <p style="font-size:0.78rem;color:var(--fg-muted);margin-bottom:0.5rem">Strenger Ausschluss: Rezepte mit diesen Allergenen werden nie vorgeschlagen.</p>
+    <div class="allergen-checkbox-grid">
+      {% for allergen in eu14_allergens %}
+      <label class="allergen-check-label">
+        <input type="checkbox" name="allergies[]" value="{{ allergen.key }}"
+               {{ "checked" if allergen.key in profile.allergies else "" }}>
+        <span>{{ allergen.label }}</span>
+      </label>
+      {% endfor %}
+    </div>
+
+    <h3 style="font-size:0.95rem;margin-top:1rem;margin-bottom:0.5rem">Unvertraeglichkeiten</h3>
+    <p style="font-size:0.78rem;color:var(--fg-muted);margin-bottom:0.5rem">Milder Ausschluss: gleiche Wirkung wie Allergien bei der Planung.</p>
+    <div class="allergen-checkbox-grid">
+      {% for allergen in eu14_allergens %}
+      <label class="allergen-check-label">
+        <input type="checkbox" name="intolerances[]" value="{{ allergen.key }}"
+               {{ "checked" if allergen.key in profile.intolerances else "" }}>
+        <span>{{ allergen.label }}</span>
+      </label>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+
+<button type="submit" style="margin-bottom:1.5rem">Profil speichern</button>
+</form>
+
+<section>
+  <h2>Ausgeschlossene Zutaten</h2>
+  <p style="color:var(--fg-muted);margin-bottom:0.75rem">Rezepte mit diesen Zutaten werden weder angezeigt noch geplant.</p>
+  <form method="post" action="/profil/ausschluesse">
+    <div id="excluded-tags" style="display:flex;flex-wrap:wrap;gap:0.5rem;margin-bottom:0.75rem">
+      {% for ing in all_ingredients %}
+        {% if ing.id in profile.excluded_ingredient_ids %}
+        <label class="filter-chip active" style="cursor:pointer">
+          <input type="checkbox" name="excluded_ids[]" value="{{ ing.id }}" checked style="display:none">
+          <span>{{ ing.name_canonical }}</span>
+          <span class="chip-remove" onclick="this.closest('label').remove()" style="margin-left:0.25rem;cursor:pointer">&times;</span>
+        </label>
+        {% endif %}
+      {% endfor %}
+    </div>
+
+    <div style="display:flex;gap:0.5rem;align-items:end;margin-bottom:1rem">
+      <div style="flex:1">
+        <label for="add-exclusion">Zutat ausschliessen</label>
+        <select id="add-exclusion">
+          <option value="">-- waehlen --</option>
+          {% for ing in all_ingredients %}
+            {% if ing.id not in profile.excluded_ingredient_ids %}
+            <option value="{{ ing.id }}">{{ ing.name_canonical }}</option>
+            {% endif %}
+          {% endfor %}
+        </select>
+      </div>
+      <button type="button" class="btn-secondary" onclick="addExclusion()">Hinzufuegen</button>
+    </div>
+
+    <button type="submit">Ausschluesse speichern</button>
+  </form>
+</section>
+
+<script>
+function addExclusion() {
+  var sel = document.getElementById('add-exclusion');
+  var id = sel.value;
+  var name = sel.options[sel.selectedIndex].text;
+  if (!id) return;
+
+  var container = document.getElementById('excluded-tags');
+  var label = document.createElement('label');
+  label.className = 'filter-chip active';
+  label.style.cursor = 'pointer';
+  label.innerHTML =
+    '<input type="checkbox" name="excluded_ids[]" value="' + id + '" checked style="display:none">' +
+    '<span>' + name + '</span>' +
+    '<span class="chip-remove" onclick="this.closest(\'label\').remove();restoreOption(\'' + id + '\',\'' + name + '\')" style="margin-left:0.25rem;cursor:pointer">&times;</span>';
+  container.appendChild(label);
+
+  // Remove from dropdown
+  sel.remove(sel.selectedIndex);
+  sel.value = '';
+}
+
+function restoreOption(id, name) {
+  var sel = document.getElementById('add-exclusion');
+  var opt = document.createElement('option');
+  opt.value = id;
+  opt.textContent = name;
+  sel.appendChild(opt);
+}
+</script>
+
+<p><a href="/">Zurueck zum Dashboard</a></p>
+{% endblock %}

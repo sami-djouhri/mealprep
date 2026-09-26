@@ -1,0 +1,27 @@
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+*.egg-info/
+dist/
+build/
+*.db
+*.db-shm
+*.db-wal
+.env
+# ★ Auch die Abwandlungen. `.env` allein deckt `.env.bak`, `.env.alt` oder eine
+# Sicherung vor einer Umstellung NICHT ab, und genau so kommen Geheimnisse in
+# ein Repo: nicht ueber die Datei, an die alle denken, sondern ueber ihre Kopie.
+# Die vier Schwesterprojekte hatten `.env.*` laengst, mealprep als einziges nicht
+# (gefunden 2026-09-06). `.env.example` ist die Ausnahme, sie ist die Vorlage
+# ohne Werte und soll versioniert bleiben.
+.env.*
+!.env.example
+.pytest_cache/
+.ruff_cache/
+
+# Keine manuellen Backup-Dateien einchecken (Aufräumen 2026-07-27)
+*.bak
+*.bak-*
+*.old
+*.orig

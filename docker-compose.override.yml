@@ -1,0 +1,4 @@
+# Boot-Resilienz Phase 2: oom_score_adj (INTERNAL-App, opferbar). Reversibel: Datei löschen + recreate.
+services:
+  mealprep:
+    oom_score_adj: 500

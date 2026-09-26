@@ -1,0 +1,196 @@
+{% extends "base.html" %}
+{% block title %}Wochenplan – {{ week_label }}{% endblock %}
+{% block content %}
+
+<!-- Week Navigation -->
+<div class="date-nav">
+  <a href="/plan/wochenplan?start_date={{ prev_week }}" class="date-nav-btn">&larr;</a>
+  <span class="date-nav-label">{{ week_label }}</span>
+  <a href="/plan/wochenplan?start_date={{ next_week }}" class="date-nav-btn">&rarr;</a>
+  <a href="/plan/wochenplan" class="date-nav-today">Diese Woche</a>
+</div>
+
+<h1>Wochenplan</h1>
+
+<!-- Plan Week Button -->
+<div style="margin-bottom:1.5rem;display:flex;gap:0.75rem;flex-wrap:wrap;align-items:center">
+  <form method="post" action="/plan/week?start_date={{ start_date }}" id="plan-week-form">
+    <button type="submit" class="btn" id="plan-week-btn">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14"/><path d="M5 12h14"/></svg>
+      Woche planen
+    </button>
+  </form>
+  <a href="#einkaufsliste" class="btn-secondary">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="21" r="1"/><circle cx="19" cy="21" r="1"/><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"/></svg>
+    Einkaufsliste
+  </a>
+</div>
+
+<!-- Week Calendar Grid -->
+<div class="week-plan-grid">
+  {% for day in days %}
+  {% set day_date = day.date %}
+  {% set is_today = day_date == today %}
+  {% set weekday_idx = day_date.weekday() %}
+  <div class="week-plan-day glass-card {% if is_today %}week-plan-day-today{% endif %}">
+    <div class="week-plan-day-header">
+      <div class="week-plan-day-title">
+        <span class="week-plan-weekday">{{ weekday_full[weekday_idx] }}</span>
+        <span class="week-plan-date">{{ day_date.strftime('%d.%m.') }}</span>
+        {% if is_today %}
+        <span class="week-plan-today-badge">Heute</span>
+        {% endif %}
+      </div>
+      <div class="week-plan-day-summary">
+        {% if day.total_kcal > 0 %}
+        <span class="week-plan-kcal">{{ day.total_kcal }} kcal</span>
+        <span class="week-plan-protein">{{ day.total_protein }}g P</span>
+        {% else %}
+        <span style="color:var(--fg-muted);font-size:0.82rem">Nicht geplant</span>
+        {% endif %}
+      </div>
+    </div>
+    <div class="week-plan-meals">
+      {% for meal in day.meals %}
+      <div class="week-plan-meal" data-slot="{{ meal.slot_type }}">
+        <span class="week-plan-meal-dot" style="background:var(--meal-{{ meal.slot_type | replace('packed_lunch','packed') }}, var(--fg-muted))"></span>
+        <span class="week-plan-meal-label">{{ meal.slot_label }}</span>
+        {% if meal.recipe_name %}
+        <span class="week-plan-meal-recipe">{{ meal.recipe_name }}</span>
+        {% if meal.status == "eaten" %}
+        <span class="week-plan-meal-eaten">&#10003;</span>
+        {% endif %}
+        {% if meal.pinned %}
+        <span class="week-plan-meal-pinned" title="Fixiert">
+          <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M16 2l-4 4-6 2-4 4 5.5 5.5L2 22l4.5-5.5L12 22l4-4 2-6 4-4z"/></svg>
+        </span>
+        {% endif %}
+        {% else %}
+        <span class="week-plan-meal-empty">--</span>
+        {% endif %}
+      </div>
+      {% endfor %}
+      {% if not day.meals %}
+      <div style="color:var(--fg-muted);font-size:0.82rem;padding:0.5rem 0">Keine Slots</div>
+      {% endif %}
+    </div>
+  </div>
+  {% endfor %}
+</div>
+
+<!-- Was muss diese Woche weg? Kommt aus dem Lager (/api/critical +
+     /api/stats/expiry-forecast). Steht bewusst VOR der Einkaufsliste: sonst
+     kauft man nach, was im Vorrat gerade verdirbt. -->
+<section id="muss-weg" style="margin-top:2rem">
+  <h2>
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;margin-right:0.35rem"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+    Was muss diese Woche weg?
+  </h2>
+
+  {% if not muss_weg.erreichbar %}
+  <p class="muss-weg-unbekannt">
+    Das Lager antwortet gerade nicht. Ob etwas ablaeuft, ist damit unbekannt,
+    nicht beantwortet.{% if muss_weg.grund %} ({{ muss_weg.grund }}){% endif %}
+  </p>
+  {% elif muss_weg.posten %}
+  <div class="muss-weg-liste">
+    {% for p in muss_weg.posten %}
+    <div class="muss-weg-posten{% if p.abgelaufen %} muss-weg-abgelaufen{% endif %}">
+      <span class="muss-weg-name">{{ p.name }}</span>
+      <span class="muss-weg-menge">
+        {% if p.menge is not none %}{{ p.menge | round(0) | int }} {{ p.unit }}{% endif %}
+      </span>
+      <span class="muss-weg-frist">
+        {% if p.tage_uebrig is none %}ohne Datum
+        {% elif p.tage_uebrig < -1 %}seit {{ (-p.tage_uebrig) | round(0) | int }} Tagen ueber
+        {% elif p.tage_uebrig < 0 %}seit gestern ueber
+        {% elif p.tage_uebrig == 0 %}heute
+        {% elif p.tage_uebrig < 2 %}morgen
+        {% else %}in {{ p.tage_uebrig | round(0) | int }} Tagen{% endif %}
+      </span>
+    </div>
+    {% endfor %}
+  </div>
+  {% if muss_weg.abgelaufen %}
+  <p class="muss-weg-fuss">
+    {{ muss_weg.abgelaufen }} davon {% if muss_weg.abgelaufen == 1 %}ist{% else %}sind{% endif %}
+    bereits ueber dem Datum und {% if muss_weg.abgelaufen == 1 %}gehoert{% else %}gehoeren{% endif %}
+    nicht mehr in ein Gericht, sondern aus dem Bestand.
+  </p>
+  {% endif %}
+  {% else %}
+  <p style="color:var(--fg-muted);margin-top:1rem">
+    Nichts laeuft in den naechsten {{ muss_weg.vorschau_tage }} Tagen ab.
+  </p>
+  {% endif %}
+</section>
+
+<!-- Shopping List Section -->
+<section id="einkaufsliste" style="margin-top:2rem">
+  <h2>
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;margin-right:0.35rem"><circle cx="8" cy="21" r="1"/><circle cx="19" cy="21" r="1"/><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"/></svg>
+    Einkaufsliste fuer die Woche
+  </h2>
+
+  {% if shopping_items %}
+  <div class="shopping-cards" style="margin-top:1rem">
+    {% for item in shopping_items %}
+    <div class="shopping-card">
+      <div class="shopping-card-header">
+        <span class="shopping-card-name">{{ item.ingredient_name }}</span>
+        <span class="shopping-card-amount">{{ item.total_needed }} {{ item.unit }}</span>
+      </div>
+      <div class="week-shopping-details">
+        {% if item.in_stock > 0 %}
+        <span class="week-shopping-stock">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12V8H6a2 2 0 0 1-2-2c0-1.1.9-2 2-2h12v4"/><path d="M4 6v12c0 1.1.9 2 2 2h14v-4"/><path d="M18 12a2 2 0 0 0 0 4h4v-4z"/></svg>
+          Vorrat: {{ item.in_stock }} {{ item.unit }}
+        </span>
+        {% endif %}
+        {% if item.to_buy > 0 %}
+        <span class="week-shopping-tobuy">
+          Noch kaufen: {{ item.to_buy }} {{ item.unit }}
+        </span>
+        {% elif item.in_stock > 0 %}
+        <span class="week-shopping-sufficient">Ausreichend vorhanden</span>
+        {% endif %}
+      </div>
+      {% if item.category %}
+      <div style="font-size:0.72rem;color:var(--fg-muted);margin-top:0.2rem">{{ item.category }}</div>
+      {% endif %}
+    </div>
+    {% endfor %}
+  </div>
+
+  <!-- Summary -->
+  {% set items_to_buy = shopping_items | selectattr("to_buy", "gt", 0) | list %}
+  <div style="margin-top:1rem;font-size:0.88rem;color:var(--fg-muted)">
+    {{ shopping_items | length }} Zutaten insgesamt,
+    {{ items_to_buy | length }} noch einzukaufen
+  </div>
+  {% else %}
+  <p style="color:var(--fg-muted);margin-top:1rem">Keine Zutaten benoetigt oder keine Mahlzeiten geplant.</p>
+  {% endif %}
+</section>
+
+<p style="margin-top:1.5rem"><a href="/">Zurueck zum Dashboard</a></p>
+
+<script>
+document.getElementById('plan-week-form').addEventListener('submit', function(e) {
+  e.preventDefault();
+  var btn = document.getElementById('plan-week-btn');
+  btn.textContent = 'Plane...';
+  btn.disabled = true;
+  btn.classList.add('btn-disabled');
+  fetch('/plan/week?start_date={{ start_date }}', {method:'POST'})
+    .then(function(r) { return r.json(); })
+    .then(function() { window.location.reload(); })
+    .catch(function() {
+      btn.textContent = 'Woche planen';
+      btn.disabled = false;
+      btn.classList.remove('btn-disabled');
+    });
+});
+</script>
+
+{% endblock %}

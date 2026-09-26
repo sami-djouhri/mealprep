@@ -1,0 +1,83 @@
+services:
+  mealprep:
+    build: .
+    container_name: mealprep
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    read_only: true
+    tmpfs:
+      - /tmp
+      - /run
+    ports:
+      - "127.0.0.1:8096:8000"
+    volumes:
+      - mealprep-data:/app/data
+    environment:
+      - PYTHONDONTWRITEBYTECODE=1
+      - DATABASE_URL=sqlite:////app/data/app.db
+      - LAGER_BASE_URL=http://lager:8000
+      - KALENDER_BASE_URL=http://kalender:8085
+      - KALENDER_FEED_TOKEN=${KALENDER_FEED_TOKEN:-}
+      # Native Apps: HS256-Backend-JWT verifizieren (aud=mealprep-api). Wert aus
+      # .env (git-ignored), muss == SAGANTA_BACKEND_SECRET des auth-service sein.
+      - SAGANTA_BACKEND_SECRET=${SAGANTA_BACKEND_SECRET:-}
+      # ★ Dieser Dienst hat KEIN env_file. Alles aus .env muss hier einzeln
+      # durchgereicht werden, sonst steht der Wert in der Datei und kommt im
+      # Container nie an. Beim Mandanten-Geheimnis waere das besonders tueckisch:
+      # das Ausrollskript meldet einen Fingerabdruck, der Dienst bliebe still im
+      # ungeprueften Zustand.
+      # Echtheitsnachweis fuer X-Saganta-Sub (app/tenant_auth.py):
+      - MEALPREP_TENANT_SECRET=${MEALPREP_TENANT_SECRET:-}
+      # Geheimnis DES LAGERS, fuer ausgehende Aufrufe dorthin:
+      - LAGER_TENANT_SECRET=${LAGER_TENANT_SECRET:-}
+      # Dasselbe fuer ausgehende Aufrufe nach fitness. Ohne den Wert geht der
+      # Mandanten-Header ungesigniert hinueber, was fitness in seiner
+      # Beobachtungsphase annimmt.
+      - FITNESS_TENANT_SECRET=${FITNESS_TENANT_SECRET:-}
+      - TENANT_HEADER_ENFORCE=${TENANT_HEADER_ENFORCE:-0}
+      # Tagesbezogener Bedarf: Anteil, der vom Ruhetag auf den Trainingstag
+      # wandert. 0 schaltet die Tagesunterscheidung ab.
+      - TRAININGSTAG_ANTEIL=${TRAININGSTAG_ANTEIL:-0.10}
+      # Mandant fuer headerlose interne Aufrufer. Leer = niemand, fail-closed.
+      - DEFAULT_OWNER_SUB=${DEFAULT_OWNER_SUB:-}
+    # ★★ `lager_net` und `kalender_net` sind hier am 2026-09-06 entfallen. Sie
+    # waren Aliase auf die Default-Netze der Nachbarprojekte und sollten
+    # `http://lager:8000` und `http://kalender:8085` aufloesbar machen. Gemessen
+    # aus dem laufenden Container: beide Namen zeigen auf 10.210.3.x, also auf
+    # cc-apps, in dem alle vier Apps ohnehin haengen.
+    #
+    # ★★ Bei `lager_net` war es sogar schlimmer als redundant: `lager` haengt
+    # ueberhaupt nicht in `lager_default` (nur in cc-apps und cc-core). Der Alias
+    # zog mealprep also in ein Netz, das nach lager benannt ist und lager nicht
+    # enthaelt. Er konnte nie etwas beigetragen haben.
+    #
+    # Beide kosteten aber ein `external: true`-Netz, das ein Fremder nicht
+    # anlegen kann, weil es aus einem fremden Compose-Projekt stammt.
+    networks:
+      - default
+      - cc-proxy
+      - cc-apps
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          memory: 256m
+          cpus: "0.5"
+
+volumes:
+  mealprep-data:
+
+# ★ Lokal definiert statt `external: true`, damit dieses Compose ueberall laeuft
+# und nicht nur auf dem einen Wirt, der die Bruecken vorher angelegt hat. Die
+# Homelab-Sicht steht in `docker-compose.homelab.yml` und wird dort ueber
+# COMPOSE_FILE in der .env mitgeladen.
+networks:
+  cc-proxy:
+  cc-apps:

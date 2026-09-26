@@ -1,0 +1,112 @@
+{% extends "base.html" %}
+{% block title %}{{ recipe.name }}{% endblock %}
+{% block content %}
+
+{% if flash %}
+<div class="flash">{{ flash }}</div>
+{% endif %}
+
+<div class="recipe-hero">
+  <canvas data-recipe-name="{{ recipe.name }}"
+          data-recipe-tags="{{ recipe.tags | join(',') if recipe.tags else '' }}"
+          data-recipe-categories="{{ ingredient_categories | join(',') if ingredient_categories else '' }}"
+          style="width:100%;height:220px"></canvas>
+</div>
+
+<h1>{{ recipe.name }}</h1>
+
+{% if recipe.tags %}
+<ul class="tag-list">
+  {% for t in recipe.tags %}
+  <li><span class="badge">{{ t }}</span></li>
+  {% endfor %}
+</ul>
+{% endif %}
+
+{% if recipe_allergens %}
+<div class="allergen-badges" style="margin-bottom:0.5rem">
+  <span style="font-size:0.78rem;color:var(--fg-muted);margin-right:0.25rem">Allergene:</span>
+  {% for a in recipe_allergens %}
+  <span class="allergen-badge">{{ a }}</span>
+  {% endfor %}
+</div>
+{% endif %}
+
+<p style="color:var(--fg-muted)">{{ recipe.portions_default }} {{ "Portion" if recipe.portions_default == 1 else "Portionen" }} &middot; {{ recipe.cook_time_min }} Minuten</p>
+
+{% if recipe.nutrition_per_portion %}
+<section>
+  <h2>Naehrwerte pro Portion</h2>
+  <div class="nutrition-grid">
+    <div class="item">
+      <div class="value">{{ recipe.nutrition_per_portion.kcal | int }}</div>
+      <div class="label">kcal</div>
+    </div>
+    <div class="item">
+      <div class="value">{{ recipe.nutrition_per_portion.protein_g | round(1) }}</div>
+      <div class="label">Protein (g)</div>
+    </div>
+    <div class="item">
+      <div class="value">{{ recipe.nutrition_per_portion.carbs_g | round(1) }}</div>
+      <div class="label">Kohlenhydrate (g)</div>
+    </div>
+    <div class="item">
+      <div class="value">{{ recipe.nutrition_per_portion.fat_g | round(1) }}</div>
+      <div class="label">Fett (g)</div>
+    </div>
+    <div class="item">
+      <div class="value">{{ recipe.nutrition_per_portion.fiber_g | round(1) }}</div>
+      <div class="label">Ballaststoffe (g)</div>
+    </div>
+  </div>
+</section>
+{% endif %}
+
+{% if ingredients %}
+<section>
+  <h2>Zutaten</h2>
+  <div class="glass-card" style="padding:0;overflow:hidden">
+    <table>
+      <thead>
+        <tr><th>Zutat</th><th>Menge</th><th>Einheit</th><th>Optional</th><th>Allergene</th></tr>
+      </thead>
+      <tbody>
+        {% for i in ingredients %}
+        <tr>
+          <td>{{ i.name }}</td>
+          <td>{{ i.amount }}</td>
+          <td>{{ i.unit }}</td>
+          <td>{{ "Ja" if i.optional else "" }}</td>
+          <td>
+            {% if i.allergens %}
+              {% for a in i.allergens %}
+              <span class="allergen-badge allergen-badge-sm">{{ a }}</span>
+              {% endfor %}
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endif %}
+
+{% if recipe.instructions %}
+<section>
+  <h2>Zubereitung</h2>
+  <div class="glass-card">
+    <div style="white-space:pre-wrap">{{ recipe.instructions }}</div>
+  </div>
+</section>
+{% endif %}
+
+<p style="margin-top:1rem">
+  <a class="btn" href="/rezepte/{{ recipe.id }}/bearbeiten">Bearbeiten</a>
+  <form method="post" action="/rezepte/{{ recipe.id }}/loeschen" style="display:inline"
+        onsubmit="return confirm('Rezept wirklich loeschen?')">
+    <button type="submit" class="btn-danger">Loeschen</button>
+  </form>
+  <a href="/rezepte" style="margin-left:0.75rem">Zurueck zur Liste</a>
+</p>
+{% endblock %}

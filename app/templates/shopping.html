@@ -1,0 +1,147 @@
+{% extends "base.html" %}
+{% block title %}Einkaufsliste{% endblock %}
+{% block content %}
+<h1>Einkaufsliste</h1>
+{% if shopping %}
+<p class="einkauf-kopf">
+  Liste #{{ shopping.id }} &middot; {{ offen }} von {{ lines | length }} offen
+</p>
+
+{% if bestand_unbekannt %}
+<div class="einkauf-warnung">
+  Das Lager antwortet gerade nicht. Angezeigt wird die geplante Menge, nicht der
+  Restbedarf. Abhaken ist so lange nicht moeglich.
+</div>
+{% endif %}
+
+{% if unverknuepft %}
+<div class="einkauf-warnung">
+  {{ unverknuepft }} {% if unverknuepft == 1 %}Zutat ist{% else %}Zutaten sind{% endif %}
+  keinem Lager-Produkt zugeordnet. Fuer sie gibt es keinen Bestand, gegen den
+  gerechnet werden kann, und sie lassen sich nicht einbuchen.
+  <a href="/zutaten">Zutaten pruefen</a>
+</div>
+{% endif %}
+
+<div class="shopping-cards">
+  {% for l in lines %}
+  <div class="shopping-card{% if l.gekauft_am %} shopping-card-gekauft{% endif %}"
+       data-line-id="{{ l.id }}">
+    <div class="shopping-card-header">
+      <span class="shopping-card-name">{{ l.name }}</span>
+      <span class="shopping-card-amount">
+        {% if l.gekauft_am %}
+          {{ l.gekaufte_menge }} {{ l.unit }} gekauft
+        {% elif l.bestand_unbekannt or not l.verknuepft %}
+          {{ l.geplant }} {{ l.unit }}
+        {% else %}
+          {{ l.noch_noetig }} {{ l.unit }}
+        {% endif %}
+      </span>
+    </div>
+
+    {% if not l.gekauft_am and l.bedarf_brutto is not none
+          and not l.bestand_unbekannt and l.noch_noetig != l.bedarf_brutto %}
+    <div class="shopping-restbedarf">
+      Bedarf {{ l.bedarf_brutto }} {{ l.unit }}, davon
+      {{ (l.bedarf_brutto - l.noch_noetig) | round(1) }} {{ l.unit }} im Lager
+    </div>
+    {% endif %}
+
+    <div class="shopping-card-reasons">
+      {% for r in l.reasons %}
+        {% if r == "MISSING_FOR_PLAN" %}
+        <span class="reason-badge reason-badge-missing">Fuer Plan</span>
+        {% elif r == "LOW_RUNWAY" %}
+        <span class="reason-badge reason-badge-low">Vorrat niedrig</span>
+        {% elif r == "BELOW_MIN_STOCK" %}
+        <span class="reason-badge reason-badge-minstock">Unter Mindestbestand</span>
+        {% elif r == "LAGER_VORSCHLAG" %}
+        <span class="reason-badge reason-badge-lager">Aus dem Lager</span>
+        {% else %}
+        <span class="reason-badge">{{ r }}</span>
+        {% endif %}
+      {% endfor %}
+    </div>
+    {% if l.strategic and l.strategic.efficiency_hint %}
+    <div class="shopping-impact">{{ l.strategic.efficiency_hint }}</div>
+    {% endif %}
+    {% if l.packs %}
+    <div class="shopping-card-packs">Packungen: {{ l.packs | join(', ') }}</div>
+    {% endif %}
+
+    <div class="shopping-card-aktion">
+      {% if l.gekauft_am %}
+        <button type="button" class="btn-haken-zurueck"
+                data-line-id="{{ l.id }}">Haken zuruecknehmen</button>
+      {% elif not l.verknuepft %}
+        <span class="shopping-gesperrt">Nicht mit dem Lager verknuepft</span>
+      {% elif l.bestand_unbekannt %}
+        <span class="shopping-gesperrt">Lager nicht erreichbar</span>
+      {% else %}
+        <input type="number" step="any" min="0" class="eingabe-menge"
+               value="{{ l.noch_noetig if l.noch_noetig > 0 else l.geplant }}"
+               aria-label="Gekaufte Menge in {{ l.unit }}">
+        <span class="eingabe-einheit">{{ l.unit }}</span>
+        <button type="button" class="btn-gekauft"
+                data-line-id="{{ l.id }}">Gekauft</button>
+      {% endif %}
+    </div>
+    <div class="shopping-fehler" hidden></div>
+  </div>
+  {% endfor %}
+</div>
+{% else %}
+<p style="color:var(--fg-muted)">Keine offene Einkaufsliste.</p>
+{% endif %}
+<p style="margin-top:1rem"><a href="/">Zurueck</a></p>
+
+<script>
+// Abhaken bucht in den Lager-Bestand. Der Fehlerfall bleibt an der Zeile
+// stehen, statt die Seite neu zu laden: die haeufigste Absage ist "Zutat nicht
+// verknuepft", und die will man dort lesen, wo sie gilt.
+(function () {
+  async function schicken(knopf, methode, koerper) {
+    const karte = knopf.closest('.shopping-card');
+    const fehler = karte.querySelector('.shopping-fehler');
+    const id = knopf.dataset.lineId;
+    knopf.disabled = true;
+    fehler.hidden = true;
+    try {
+      const antwort = await fetch('/shopping/lines/' + id + '/gekauft', {
+        method: methode,
+        headers: { 'Content-Type': 'application/json' },
+        body: koerper ? JSON.stringify(koerper) : undefined,
+      });
+      if (!antwort.ok) {
+        let text = 'Fehlgeschlagen (' + antwort.status + ')';
+        try {
+          const daten = await antwort.json();
+          text = daten.error || daten.detail || text;
+        } catch (e) { /* Antwort ohne JSON-Koerper */ }
+        throw new Error(text);
+      }
+      window.location.reload();
+    } catch (e) {
+      fehler.textContent = e.message;
+      fehler.hidden = false;
+      knopf.disabled = false;
+    }
+  }
+
+  document.querySelectorAll('.btn-gekauft').forEach(function (knopf) {
+    knopf.addEventListener('click', function () {
+      const feld = knopf.closest('.shopping-card-aktion').querySelector('.eingabe-menge');
+      const menge = parseFloat(feld.value);
+      schicken(knopf, 'POST', menge > 0 ? { menge: menge } : {});
+    });
+  });
+
+  document.querySelectorAll('.btn-haken-zurueck').forEach(function (knopf) {
+    knopf.addEventListener('click', function () {
+      schicken(knopf, 'DELETE', null);
+    });
+  });
+})();
+</script>
+{% endblock %}

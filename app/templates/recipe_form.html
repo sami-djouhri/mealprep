@@ -1,0 +1,141 @@
+{% extends "base.html" %}
+{% block title %}{{ "Rezept bearbeiten" if edit_mode else "Neues Rezept" }}{% endblock %}
+{% block content %}
+<h1>{{ "Rezept bearbeiten" if edit_mode else "Neues Rezept" }}</h1>
+
+<div class="glass-card">
+<form method="post" action="{{ '/rezepte/' ~ recipe.id ~ '/bearbeiten' if edit_mode else '/rezepte' }}">
+  <label for="name">Name *</label>
+  <input type="text" id="name" name="name" required value="{{ recipe.name if recipe else '' }}">
+
+  <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.75rem;">
+    <div>
+      <label for="portions_default">Portionen</label>
+      <input type="number" id="portions_default" name="portions_default" value="{{ recipe.portions_default if recipe else 1 }}" min="1">
+    </div>
+    <div>
+      <label for="cook_time_min">Kochzeit (Minuten)</label>
+      <input type="number" id="cook_time_min" name="cook_time_min" value="{{ recipe.cook_time_min if recipe else 15 }}" min="0">
+    </div>
+  </div>
+
+  <label for="tags">Tags (kommagetrennt)</label>
+  <input type="text" id="tags" name="tags" placeholder="z.B. schnell, vegan, meal-prep" value="{{ recipe.tags | join(', ') if recipe and recipe.tags else '' }}">
+
+  <fieldset>
+    <legend>Naehrwerte pro Portion</legend>
+    <div class="nutrition-grid">
+      <div>
+        <label for="nutrition_kcal">kcal</label>
+        <input type="number" id="nutrition_kcal" name="nutrition_kcal" step="any" min="0" value="{{ recipe.nutrition_per_portion.kcal if recipe and recipe.nutrition_per_portion else '' }}">
+      </div>
+      <div>
+        <label for="nutrition_protein_g">Protein (g)</label>
+        <input type="number" id="nutrition_protein_g" name="nutrition_protein_g" step="any" min="0" value="{{ recipe.nutrition_per_portion.protein_g if recipe and recipe.nutrition_per_portion else '' }}">
+      </div>
+      <div>
+        <label for="nutrition_carbs_g">Kohlenhydrate (g)</label>
+        <input type="number" id="nutrition_carbs_g" name="nutrition_carbs_g" step="any" min="0" value="{{ recipe.nutrition_per_portion.carbs_g if recipe and recipe.nutrition_per_portion else '' }}">
+      </div>
+      <div>
+        <label for="nutrition_fat_g">Fett (g)</label>
+        <input type="number" id="nutrition_fat_g" name="nutrition_fat_g" step="any" min="0" value="{{ recipe.nutrition_per_portion.fat_g if recipe and recipe.nutrition_per_portion else '' }}">
+      </div>
+      <div>
+        <label for="nutrition_fiber_g">Ballaststoffe (g)</label>
+        <input type="number" id="nutrition_fiber_g" name="nutrition_fiber_g" step="any" min="0" value="{{ recipe.nutrition_per_portion.fiber_g if recipe and recipe.nutrition_per_portion else '' }}">
+      </div>
+    </div>
+  </fieldset>
+
+  <label for="instructions">Zubereitung</label>
+  <textarea id="instructions" name="instructions" rows="5" placeholder="Zubereitungsschritte...">{{ recipe.instructions if recipe and recipe.instructions else '' }}</textarea>
+
+  <fieldset>
+    <legend>Zutaten</legend>
+    <div id="ingredients-container">
+      <!-- JS adds rows here -->
+    </div>
+    <button type="button" class="btn-secondary" onclick="addIngredientRow()">Zutat hinzufuegen</button>
+  </fieldset>
+
+  <button type="submit">{{ "Aenderungen speichern" if edit_mode else "Rezept speichern" }}</button>
+</form>
+</div>
+
+<p style="margin-top:1rem;">
+  {% if edit_mode %}
+  <a href="/rezepte/{{ recipe.id }}">Abbrechen</a>
+  {% else %}
+  <a href="/rezepte">Abbrechen</a>
+  {% endif %}
+</p>
+
+<template id="ingredient-row-tpl">
+  <div class="ingredient-row">
+    <div class="field field-name">
+      <label>Zutat</label>
+      <select name="ing_id[]" required>
+        <option value="">-- waehlen --</option>
+        {% for ing in all_ingredients %}
+        <option value="{{ ing.id }}">{{ ing.name_canonical }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="field field-amount">
+      <label>Menge</label>
+      <input type="number" name="ing_amount[]" step="any" min="0" required>
+    </div>
+    <div class="field field-unit">
+      <label>Einheit</label>
+      <select name="ing_unit[]">
+        <option value="g">g</option>
+        <option value="ml">ml</option>
+        <option value="piece">Stueck</option>
+      </select>
+    </div>
+    <div class="field field-opt">
+      <label>Opt.</label>
+      <input type="hidden" name="ing_optional[]" value="0">
+      <input type="checkbox" value="1" onchange="this.previousElementSibling.value=this.checked?'1':'0'">
+    </div>
+    <div class="field">
+      <label>&nbsp;</label>
+      <button type="button" class="btn-danger" onclick="this.closest('.ingredient-row').remove()">Entfernen</button>
+    </div>
+  </div>
+</template>
+
+<script>
+function addIngredientRow(prefill) {
+  var tpl = document.getElementById('ingredient-row-tpl');
+  var clone = tpl.content.cloneNode(true);
+  if (prefill) {
+    var sel = clone.querySelector('select[name="ing_id[]"]');
+    if (sel) sel.value = prefill.ingredient_id;
+    var amt = clone.querySelector('input[name="ing_amount[]"]');
+    if (amt) amt.value = prefill.amount;
+    var unit = clone.querySelector('select[name="ing_unit[]"]');
+    if (unit) unit.value = prefill.unit;
+    if (prefill.optional_bool) {
+      var hidden = clone.querySelector('input[name="ing_optional[]"]');
+      if (hidden) hidden.value = '1';
+      var cb = clone.querySelector('input[type="checkbox"]');
+      if (cb) cb.checked = true;
+    }
+  }
+  document.getElementById('ingredients-container').appendChild(clone);
+}
+
+{% if recipe and recipe.ingredients %}
+var existing = [
+  {% for ri in recipe.ingredients %}
+  {ingredient_id: {{ ri.ingredient_id }}, amount: {{ ri.amount }}, unit: "{{ ri.unit }}", optional_bool: {{ "true" if ri.optional_bool else "false" }}}{{ "," if not loop.last }}
+  {% endfor %}
+];
+existing.forEach(function(ing) { addIngredientRow(ing); });
+{% else %}
+addIngredientRow();
+{% endif %}
+</script>
+{% endblock %}
