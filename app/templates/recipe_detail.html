@@ -36,7 +36,7 @@
 
 {% if recipe.nutrition_per_portion %}
 <section>
-  <h2>Naehrwerte pro Portion</h2>
+  <h2>Nährwerte pro Portion</h2>
   <div class="nutrition-grid">
     <div class="item">
       <div class="value">{{ recipe.nutrition_per_portion.kcal | int }}</div>
@@ -105,8 +105,8 @@
   <a class="btn" href="/rezepte/{{ recipe.id }}/bearbeiten">Bearbeiten</a>
   <form method="post" action="/rezepte/{{ recipe.id }}/loeschen" style="display:inline"
         onsubmit="return confirm('Rezept wirklich loeschen?')">
-    <button type="submit" class="btn-danger">Loeschen</button>
+    <button type="submit" class="btn-danger">Löschen</button>
   </form>
-  <a href="/rezepte" style="margin-left:0.75rem">Zurueck zur Liste</a>
+  <a href="/rezepte" style="margin-left:0.75rem">Zurück zur Liste</a>
 </p>
 {% endblock %}

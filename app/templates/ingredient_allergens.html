@@ -9,7 +9,7 @@
 
 <div class="glass-card">
 <form method="post" action="/zutaten/{{ ingredient.id }}/allergene">
-  <p style="color:var(--fg-muted);margin-bottom:0.75rem">EU-14 Hauptallergene fuer diese Zutat markieren.</p>
+  <p style="color:var(--fg-muted);margin-bottom:0.75rem">EU-14 Hauptallergene für diese Zutat markieren.</p>
   <div class="allergen-checkbox-grid">
     {% for allergen in eu14_allergens %}
     <label class="allergen-check-label">
@@ -23,5 +23,5 @@
 </form>
 </div>
 
-<p style="margin-top:1rem"><a href="/zutaten">Zurueck zur Zutatenliste</a></p>
+<p style="margin-top:1rem"><a href="/zutaten">Zurück zur Zutatenliste</a></p>
 {% endblock %}

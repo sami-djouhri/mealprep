@@ -61,7 +61,7 @@ from app.services.stock_forecast import calculate_days_of_food
 router = APIRouter(prefix="/api", tags=["spa"])
 
 SLOT_LABELS = {
-    "breakfast": "Fruehstueck",
+    "breakfast": "Frühstück",
     "lunch": "Mittagessen",
     "dinner": "Abendessen",
     "snack": "Snack",
@@ -192,10 +192,10 @@ def _compute_day_status(
         status_label = "Auf Kurs"
     elif kcal_coverage >= 0.70 or protein_coverage >= 0.70:
         status = "attention"
-        status_label = "Anpassung noetig"
+        status_label = "Anpassung nötig"
     else:
         status = "at_risk"
-        status_label = "Ziel gefaehrdet"
+        status_label = "Ziel gefährdet"
 
     # All eaten? Check actual vs target
     if remaining_slots == 0:
@@ -204,18 +204,18 @@ def _compute_day_status(
             status_label = "Auf Kurs"
         elif eaten_kcal >= target_kcal * 0.70:
             status = "attention"
-            status_label = "Anpassung noetig"
+            status_label = "Anpassung nötig"
         else:
             status = "at_risk"
-            status_label = "Ziel gefaehrdet"
+            status_label = "Ziel gefährdet"
 
     # Build message
     if remaining_slots == 0:
-        message = f"Tag abgeschlossen: {eaten_kcal:.0f} kcal, {eaten_protein:.0f}g Protein"
+        message = f"Tag abgeschlossen: {eaten_kcal:.0f} kcal, {eaten_protein:.0f} g Protein"
     else:
         message = (
-            f"Noch {remaining_kcal:.0f} kcal und {remaining_protein:.0f}g Protein "
-            f"fuer {remaining_slots} Mahlzeit{'en' if remaining_slots != 1 else ''}"
+            f"Noch {remaining_kcal:.0f} kcal und {remaining_protein:.0f} g Protein "
+            f"für {remaining_slots} Mahlzeit{'en' if remaining_slots != 1 else ''}"
         )
 
     # Next meal suggestion: first non-eaten slot with a recipe

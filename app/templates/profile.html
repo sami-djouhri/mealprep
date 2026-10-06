@@ -27,11 +27,11 @@
 
 <form method="post" action="/profil/koerperdaten">
 <section>
-  <h2>Koerperdaten</h2>
+  <h2>Körperdaten</h2>
   <div class="glass-card">
     <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.75rem;">
       <div>
-        <label for="height_cm">Groesse (cm)</label>
+        <label for="height_cm">Größe (cm)</label>
         <input type="number" id="height_cm" name="height_cm" step="0.1" min="100" max="250" value="{{ profile.height_cm }}" required>
       </div>
       <div>
@@ -41,7 +41,7 @@
       <div>
         <label for="sex">Geschlecht</label>
         <select id="sex" name="sex">
-          <option value="male" {{ "selected" if profile.sex == "male" }}>Maennlich</option>
+          <option value="male" {{ "selected" if profile.sex == "male" }}>Männlich</option>
           <option value="female" {{ "selected" if profile.sex == "female" }}>Weiblich</option>
         </select>
       </div>
@@ -50,7 +50,7 @@
         <input type="date" id="birth_date" name="birth_date" value="{{ profile.birth_date.isoformat() if profile.birth_date else '' }}">
       </div>
       <div>
-        <label for="body_fat_pct">Koerperfett (%)</label>
+        <label for="body_fat_pct">Körperfett (%)</label>
         <input type="number" id="body_fat_pct" name="body_fat_pct" step="0.1" min="1" max="60" value="{{ profile.body_fat_pct if profile.body_fat_pct is not none else '' }}" placeholder="optional">
       </div>
       <div>
@@ -109,7 +109,7 @@
     </div>
   </div>
   <div class="glass-card" style="margin-top:0.75rem">
-    <label for="kcal_target_override">kcal-Ziel ueberschreiben</label>
+    <label for="kcal_target_override">kcal-Ziel überschreiben</label>
     <input type="number" id="kcal_target_override" name="kcal_target_override" min="800" max="8000" value="{{ profile.kcal_target_override if profile.kcal_target_override is not none else '' }}" placeholder="leer = automatisch aus TDEE">
     <p style="font-size:0.78rem;color:var(--fg-muted);margin-top:-0.5rem">Wenn gesetzt, wird dieses kcal-Ziel statt des berechneten TDEE-Werts verwendet. Protein/Kohlenhydrate/Fett werden entsprechend angepasst.</p>
   </div>
@@ -117,7 +117,7 @@
 {% endif %}
 
 <section>
-  <h2>Allergien &amp; Unvertraeglichkeiten</h2>
+  <h2>Allergien &amp; Unverträglichkeiten</h2>
   <p style="color:var(--fg-muted);margin-bottom:0.75rem">Rezepte mit Zutaten, die diese Allergene enthalten, werden bei der Planung automatisch ausgeschlossen (EU-14 Hauptallergene).</p>
   <div class="glass-card">
     <h3 style="font-size:0.95rem;margin-bottom:0.5rem">Allergien</h3>
@@ -132,7 +132,7 @@
       {% endfor %}
     </div>
 
-    <h3 style="font-size:0.95rem;margin-top:1rem;margin-bottom:0.5rem">Unvertraeglichkeiten</h3>
+    <h3 style="font-size:0.95rem;margin-top:1rem;margin-bottom:0.5rem">Unverträglichkeiten</h3>
     <p style="font-size:0.78rem;color:var(--fg-muted);margin-bottom:0.5rem">Milder Ausschluss: gleiche Wirkung wie Allergien bei der Planung.</p>
     <div class="allergen-checkbox-grid">
       {% for allergen in eu14_allergens %}
@@ -169,7 +169,7 @@
       <div style="flex:1">
         <label for="add-exclusion">Zutat ausschliessen</label>
         <select id="add-exclusion">
-          <option value="">-- waehlen --</option>
+          <option value="">-- wählen --</option>
           {% for ing in all_ingredients %}
             {% if ing.id not in profile.excluded_ingredient_ids %}
             <option value="{{ ing.id }}">{{ ing.name_canonical }}</option>
@@ -177,7 +177,7 @@
           {% endfor %}
         </select>
       </div>
-      <button type="button" class="btn-secondary" onclick="addExclusion()">Hinzufuegen</button>
+      <button type="button" class="btn-secondary" onclick="addExclusion()">Hinzufügen</button>
     </div>
 
     <button type="submit">Ausschluesse speichern</button>
@@ -215,5 +215,5 @@ function restoreOption(id, name) {
 }
 </script>
 
-<p><a href="/">Zurueck zum Dashboard</a></p>
+<p><a href="/">Zurück zum Dashboard</a></p>
 {% endblock %}

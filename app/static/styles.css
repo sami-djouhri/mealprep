@@ -1,44 +1,182 @@
-/* MealPrep – Glassmorphism Design System */
+/* MealPrep: Tagesplanung hinter Milchglas.
+ * ============================================================================
+ *
+ * WAS GEBLIEBEN IST
+ * Das Bild dieses Dienstes war schon durchgearbeitet und bleibt es: tiefes
+ * Indigo, weiche Glasflaechen, und Farben, die etwas BEDEUTEN statt zu
+ * schmuecken - je Mahlzeitart eine, je Tagestyp eine, je Naehrstofflage eine.
+ * Das ist genau die Linie, die im Haus gilt, und daran wurde nichts geaendert.
+ *
+ * WAS SICH GEAENDERT HAT (2026-09-27)
+ *
+ * 1. GERECHNETE KONTRASTE STATT GESCHAETZTER. Zwei Werte des Bestands lagen
+ *    unter der Schwelle, und beide trafen viel Text:
+ *      --fg-subtle  #7a7594  3.81:1   (4.5 noetig)
+ *      --accent     #7c5cfc  3.80:1   als Schriftfarbe, 33 Stellen
+ *    Dazu stand weisse Schrift auf der Akzentflaeche bei 4.38:1.
+ *    Daraus folgt die Trennung: --accent ist jetzt die FLAECHE (dunkler, damit
+ *    Weiss darauf traegt), --accent-text die SCHRIFT (heller, damit sie auf
+ *    dem Glas traegt). Ein Ton kann nicht beides zugleich sein.
+ *
+ * 2. ZWEI TAGESZEITEN. Der Dienst folgt jetzt `prefers-color-scheme`.
+ *    Moeglich wurde das erst durch die beiden Kanalvariablen --glas und
+ *    --tiefe: die 70 Glasflaechen und 14 Schatten standen als feste
+ *    rgba(255,255,255,X) bzw. rgba(0,0,0,X) im Blatt verstreut und haetten
+ *    einzeln nachgezogen werden muessen. Jetzt haengen alle an einem Wert je
+ *    Modus. Der helle Modus ist keine Invertierung: das Glas wird nicht
+ *    schwarz, es wird zu einem dunklen Schleier auf Papier, und die
+ *    Mahlzeitfarben sind abgedunkelt statt gespiegelt.
+ *
+ * 3. EIGENE SCHRIFT. Statt des System-Stapels jetzt Outfit, lokal als WOFF2
+ *    (45 KB, werkzeug/schriften-holen.py). Geometrisch wie die runden Formen,
+ *    und mit aufrechten, gleich breiten Ziffern - darauf kommt es hier an, weil
+ *    kcal, Gramm und Prozente den ganzen Tag verglichen werden. Kein Abruf bei
+ *    Google zur Laufzeit: das waere die IP jedes Aufrufers an einen Dritten
+ *    (LG Muenchen I, 20.01.2022, 3 O 17493/20) und das Ende der
+ *    Offline-Faehigkeit.
+ *
+ * ★ FALLE: `--glas` und `--tiefe` sind KANAELE, keine Farben. Sie stehen ohne
+ * Klammern da ("255, 255, 255") und gehoeren in ein rgba(var(--glas), 0.07).
+ * Wer sie wie eine Farbe benutzt (`background: var(--glas)`), bekommt keinen
+ * Fehler, sondern gar nichts: der Wert ist als Farbe ungueltig und die
+ * Eigenschaft faellt still auf ihren Anfangswert.
+ *
+ * Gegenproben:
+ *   python3 ~/homelab-work/design-wellen/kontrast.py --paare <paare.tsv>
+ *   python3 ~/homelab-work/design-wellen/schrift-pruefen.py app/static/styles.css
+ *   python3 ~/homelab-work/design-wellen/css-variablen-pruefen.py app/static app/templates
+ */
 
-/* ================================================================
-   CSS VARIABLES & DESIGN TOKENS
-   ================================================================ */
+@import url('schriften.css');
 
 :root {
+  /* ---- Nacht (Vorgabe) ---- */
   --bg-start: #0f0c29;
   --bg-mid: #1a1a3e;
   --bg-end: #24243e;
-  --fg: #e8e6f0;
-  --fg-muted: #9994b8;
-  --fg-subtle: #7a7594;
-  --accent: #7c5cfc;
+  --fg: #e8e6f0;          /* 13.49:1 auf --bg-mid */
+  --fg-muted: #9994b8;    /*  5.77:1 */
+  --fg-subtle: #9590b2;   /*  4.95 bis 6.25:1, war #7a7594 mit 3.81:1 */
+
+  /* ★ Zwei Toene, zwei Aufgaben. --accent traegt weisse Schrift (4.95:1),
+     --accent-text steht als Schrift auf dem Glas (4.85 bis 6.13:1). Der eine
+     Ton, der vorher beides war, konnte nur eines davon. */
+  --accent: #7354ef;
+  --accent-text: #9b7dff;
   --accent-light: #9b7dff;
-  --accent-glow: rgba(124, 92, 252, 0.35);
-  --glass-bg: rgba(255, 255, 255, 0.07);
-  --glass-border: rgba(255, 255, 255, 0.12);
-  --glass-hover: rgba(255, 255, 255, 0.12);
+  --accent-glow: rgba(115, 84, 239, 0.35);
+
+  /* Kanaele fuer Glas und Schatten. Siehe die Falle im Kopf. */
+  --glas: 255, 255, 255;
+  --tiefe: 0, 0, 0;
+
+  --glass-bg: rgba(var(--glas), 0.07);
+  --glass-border: rgba(var(--glas), 0.12);
+  --glass-hover: rgba(var(--glas), 0.12);
+
   --green: #34d399;
   --yellow: #fbbf24;
   --red: #f87171;
+
+  /* Je Mahlzeitart eine Farbe. Das ist Bedeutung, keine Zier: der Tagesplan
+     wird nach Art ueberflogen, nicht gelesen. */
   --meal-breakfast: #f59e42;
   --meal-lunch: #34d399;
   --meal-dinner: #a78bfa;
   --meal-snack: #38bdf8;
   --meal-packed: #f59e0b;
+
   --status-supports: var(--green);
   --status-neutral: #60a5fa;
   --status-attention: var(--yellow);
   --status-problem: var(--red);
+
+  --schule: #38bdf8;   /* Tagestyp Schule, war fest im Blatt */
+
+  /* ★ Kanaele fuer getoente Flaechen. 108 Stellen im Blatt setzten ihren
+     Farbton als feste Zahlenfolge und kannten die Tageszeit deshalb nicht -
+     im hellen Modus waere ein Hauch des NACHT-Gruens auf Papier gelandet.
+     Wie --glas und --tiefe stehen sie ohne Klammern da und gehoeren in ein
+     rgba(var(--x), 0.18). */
+  --akzent-k: 124, 92, 252;
+  --gruen-k: 52, 211, 153;
+  --gelb-k: 251, 191, 36;
+  --rot-k: 248, 113, 113;
+  --blau-k: 96, 165, 250;
+  --schule-k: 56, 189, 248;
+  --fruehstueck-k: 245, 158, 66;
+  --mitnahme-k: 245, 158, 11;
+  --abend-k: 167, 139, 250;
+  --grund-k: 15, 12, 41;
+
+  --schrift: 'Outfit', system-ui, -apple-system, 'Segoe UI', sans-serif;
+
   --radius-sm: 8px;
   --radius-md: 12px;
   --radius-lg: 20px;
   --blur: blur(14px);
-  --shadow: 0 8px 32px rgba(0, 0, 0, 0.25);
-  --shadow-elevated: 0 12px 48px rgba(0, 0, 0, 0.35);
+  --shadow: 0 8px 32px rgba(var(--tiefe), 0.25);
+  --shadow-elevated: 0 12px 48px rgba(var(--tiefe), 0.35);
   --nav-height: 64px;
+  --ziel: 44px;
   --transition-fast: 0.15s cubic-bezier(0.4, 0, 0.2, 1);
   --transition-normal: 0.25s cubic-bezier(0.4, 0, 0.2, 1);
   --transition-slow: 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@media (prefers-color-scheme: light) {
+  :root {
+    /* ---- Tag ----
+       Derselbe Dienst am Fenster: aus dem Indigo-Verlauf wird ein sehr helles
+       Lila-Papier, und das Milchglas wird zu einem duennen dunklen Schleier
+       darauf. Kein Wert ist gespiegelt. */
+    --bg-start: #f3f1fa;
+    --bg-mid: #ebe8f6;
+    --bg-end: #e4e0f2;
+    --fg: #26233a;          /* 12.58:1 auf --bg-mid */
+    --fg-muted: #575279;    /*  6.03:1 */
+    --fg-subtle: #64608a;   /*  4.86 bis 5.24:1 */
+
+    --accent: #5b3fd4;      /* Flaeche: Weiss darauf 6.76:1 */
+    --accent-text: #5b3fd4; /* Schrift: 5.60 bis 6.04:1 */
+    --accent-light: #4a32b8;
+    --accent-glow: rgba(91, 63, 212, 0.22);
+
+    /* Der Schleier ist dunkel und duenn statt hell. Dieselben 70 Stellen. */
+    --glas: 40, 34, 70;
+    --tiefe: 40, 34, 70;
+
+    --glass-bg: rgba(var(--glas), 0.045);
+    --glass-border: rgba(var(--glas), 0.13);
+    --glass-hover: rgba(var(--glas), 0.085);
+
+    --green: #036b4e;
+    --yellow: #854d0e;
+    --red: #b91c1c;
+
+    --meal-breakfast: #9a4404;
+    --meal-lunch: #036b4e;
+    --meal-dinner: #6d28d9;
+    --meal-snack: #0369a1;
+    --meal-packed: #854d0e;
+
+    --status-neutral: #1d4ed8;
+    --schule: #0369a1;
+
+    --akzent-k: 91, 63, 212;
+    --gruen-k: 3, 107, 78;
+    --gelb-k: 133, 77, 14;
+    --rot-k: 185, 28, 28;
+    --blau-k: 29, 78, 216;
+    --schule-k: 3, 105, 161;
+    --fruehstueck-k: 154, 68, 4;
+    --mitnahme-k: 133, 77, 14;
+    --abend-k: 109, 40, 217;
+    --grund-k: 243, 241, 250;
+
+    --shadow: 0 8px 32px rgba(var(--tiefe), 0.10);
+    --shadow-elevated: 0 12px 48px rgba(var(--tiefe), 0.16);
+  }
 }
 
 /* ================================================================
@@ -85,9 +223,9 @@
 
 .skeleton {
   background: linear-gradient(90deg,
-    rgba(255, 255, 255, 0.04) 25%,
-    rgba(255, 255, 255, 0.08) 50%,
-    rgba(255, 255, 255, 0.04) 75%);
+    rgba(var(--glas), 0.04) 25%,
+    rgba(var(--glas), 0.08) 50%,
+    rgba(var(--glas), 0.04) 75%);
   background-size: 200% 100%;
   animation: skeleton-loading 1.8s ease-in-out infinite;
   border-radius: var(--radius-sm);
@@ -105,7 +243,7 @@ html {
 }
 
 body {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+  font-family: var(--schrift);
   background: linear-gradient(135deg, var(--bg-start), var(--bg-mid), var(--bg-end));
   background-attachment: fixed;
   color: var(--fg);
@@ -117,7 +255,7 @@ body {
 }
 
 a {
-  color: var(--accent);
+  color: var(--accent-text);
   text-decoration: none;
   transition: color var(--transition-fast);
 }
@@ -202,12 +340,12 @@ main {
   padding: 0.75rem 1.25rem;
   max-width: 860px;
   margin: 0 auto 1.5rem;
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.05));
+  background: linear-gradient(135deg, rgba(var(--glas), 0.08), rgba(var(--glas), 0.05));
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
   border: 1px solid var(--glass-border);
   border-radius: var(--radius-md);
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 4px 20px rgba(var(--tiefe), 0.15);
 }
 
 .top-nav .nav-brand {
@@ -224,7 +362,7 @@ main {
 .top-nav .nav-brand svg {
   width: 22px;
   height: 22px;
-  color: var(--accent);
+  color: var(--accent-text);
 }
 
 .top-nav a {
@@ -243,14 +381,14 @@ main {
 
 .top-nav a:hover {
   color: var(--fg);
-  background: rgba(255, 255, 255, 0.08);
+  background: rgba(var(--glas), 0.08);
   text-decoration: none;
   transform: translateY(-1px);
 }
 
 .top-nav a.nav-active {
-  color: var(--accent);
-  background: rgba(124, 92, 252, 0.12);
+  color: var(--accent-text);
+  background: rgba(var(--akzent-k), 0.12);
   text-decoration: none;
 }
 
@@ -267,12 +405,12 @@ main {
   left: 0;
   right: 0;
   height: var(--nav-height);
-  background: linear-gradient(180deg, rgba(15, 12, 41, 0.88), rgba(15, 12, 41, 0.95));
+  background: linear-gradient(180deg, rgba(var(--grund-k), 0.88), rgba(var(--grund-k), 0.95));
   backdrop-filter: blur(24px);
   -webkit-backdrop-filter: blur(24px);
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  border-top: 1px solid rgba(var(--glas), 0.08);
   z-index: 1000;
-  box-shadow: 0 -4px 24px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 -4px 24px rgba(var(--tiefe), 0.2);
 }
 
 .bottom-nav-inner {
@@ -307,7 +445,7 @@ main {
 
 .bottom-nav a:hover,
 .bottom-nav a.nav-active {
-  color: var(--accent);
+  color: var(--accent-text);
   text-decoration: none;
 }
 
@@ -322,7 +460,7 @@ main {
 .loading-overlay {
   position: fixed;
   top: 0; left: 0; right: 0; bottom: 0;
-  background: rgba(15, 12, 41, 0.6);
+  background: rgba(var(--grund-k), 0.6);
   backdrop-filter: blur(6px);
   display: flex;
   align-items: center;
@@ -335,8 +473,8 @@ main {
 .spinner {
   width: 40px;
   height: 40px;
-  border: 3px solid rgba(255, 255, 255, 0.1);
-  border-top-color: var(--accent);
+  border: 3px solid rgba(var(--glas), 0.1);
+  border-top-color: var(--accent-text);
   border-radius: 50%;
   animation: spinner 0.7s linear infinite;
   box-shadow: 0 0 16px var(--accent-glow);
@@ -347,16 +485,16 @@ main {
    ================================================================ */
 
 .flash {
-  background: rgba(52, 211, 153, 0.12);
+  background: rgba(var(--gruen-k), 0.12);
   color: var(--green);
-  border: 1px solid rgba(52, 211, 153, 0.25);
+  border: 1px solid rgba(var(--gruen-k), 0.25);
   border-radius: var(--radius-md);
   padding: 0.85rem 1.15rem;
   margin-bottom: 1.25rem;
   font-weight: 500;
   font-size: 0.9rem;
   animation: fadeInUp 0.3s ease-out both;
-  box-shadow: 0 4px 16px rgba(52, 211, 153, 0.08);
+  box-shadow: 0 4px 16px rgba(var(--gruen-k), 0.08);
 }
 
 /* ================================================================
@@ -384,7 +522,7 @@ button, .btn {
 button:hover, .btn:hover {
   opacity: 0.92;
   transform: translateY(-1px);
-  box-shadow: 0 4px 16px rgba(124, 92, 252, 0.3);
+  box-shadow: 0 4px 16px rgba(var(--akzent-k), 0.3);
   text-decoration: none;
 }
 
@@ -399,7 +537,7 @@ button:focus-visible, .btn:focus-visible {
 }
 
 .btn-secondary {
-  background: rgba(255, 255, 255, 0.08);
+  background: rgba(var(--glas), 0.08);
   color: var(--fg);
   border: 1px solid var(--glass-border);
   padding: 0.5rem 0.9rem;
@@ -414,8 +552,8 @@ button:focus-visible, .btn:focus-visible {
 }
 
 .btn-secondary:hover {
-  background: rgba(255, 255, 255, 0.14);
-  border-color: rgba(255, 255, 255, 0.2);
+  background: rgba(var(--glas), 0.14);
+  border-color: rgba(var(--glas), 0.2);
   transform: translateY(-1px);
 }
 
@@ -424,9 +562,9 @@ button:focus-visible, .btn:focus-visible {
 }
 
 .btn-danger {
-  background: rgba(248, 113, 113, 0.15);
+  background: rgba(var(--rot-k), 0.15);
   color: var(--red);
-  border: 1px solid rgba(248, 113, 113, 0.3);
+  border: 1px solid rgba(var(--rot-k), 0.3);
   padding: 0.45rem 0.8rem;
   border-radius: var(--radius-sm);
   cursor: pointer;
@@ -436,7 +574,7 @@ button:focus-visible, .btn:focus-visible {
 }
 
 .btn-danger:hover {
-  background: rgba(248, 113, 113, 0.25);
+  background: rgba(var(--rot-k), 0.25);
   transform: translateY(-1px);
 }
 
@@ -469,11 +607,11 @@ table {
 th, td {
   text-align: left;
   padding: 0.7rem 0.85rem;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  border-bottom: 1px solid rgba(var(--glas), 0.06);
 }
 
 tr:hover td {
-  background: rgba(255, 255, 255, 0.02);
+  background: rgba(var(--glas), 0.02);
 }
 
 th {
@@ -498,7 +636,7 @@ th {
 .search-bar input {
   flex: 1;
   padding: 0.6rem 0.95rem;
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(var(--glas), 0.05);
   border: 1px solid var(--glass-border);
   border-radius: var(--radius-sm);
   font-size: 0.95rem;
@@ -510,14 +648,14 @@ th {
 .search-bar input::placeholder { color: var(--fg-subtle); }
 
 .search-bar input:hover {
-  border-color: rgba(255, 255, 255, 0.18);
-  background: rgba(255, 255, 255, 0.07);
+  border-color: rgba(var(--glas), 0.18);
+  background: rgba(var(--glas), 0.07);
 }
 
 .search-bar input:focus {
-  border-color: var(--accent);
+  border-color: var(--accent-text);
   box-shadow: 0 0 0 3px var(--accent-glow);
-  background: rgba(255, 255, 255, 0.08);
+  background: rgba(var(--glas), 0.08);
 }
 
 /* ================================================================
@@ -553,7 +691,7 @@ th {
   border-radius: 20px;
   font-size: 0.78rem;
   font-weight: 500;
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(var(--glas), 0.05);
   border: 1px solid var(--glass-border);
   color: var(--fg-muted);
   cursor: pointer;
@@ -562,17 +700,17 @@ th {
 }
 
 .filter-chip:hover {
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(var(--glas), 0.1);
   color: var(--fg);
   text-decoration: none;
   transform: translateY(-1px);
 }
 
 .filter-chip.active {
-  background: rgba(124, 92, 252, 0.2);
-  border-color: var(--accent);
-  color: var(--accent);
-  box-shadow: 0 2px 8px rgba(124, 92, 252, 0.15);
+  background: rgba(var(--akzent-k), 0.2);
+  border-color: var(--accent-text);
+  color: var(--accent-text);
+  box-shadow: 0 2px 8px rgba(var(--akzent-k), 0.15);
 }
 
 /* ================================================================
@@ -594,16 +732,16 @@ th {
   text-decoration: none;
   color: inherit;
   display: block;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 4px 16px rgba(var(--tiefe), 0.15);
   transition: transform var(--transition-fast), box-shadow var(--transition-normal), background var(--transition-normal), border-color var(--transition-normal);
   animation: fadeInUp 0.4s ease-out both;
 }
 
 .recipe-card:hover {
   transform: translateY(-3px);
-  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.35);
+  box-shadow: 0 16px 48px rgba(var(--tiefe), 0.35);
   background: var(--glass-hover);
-  border-color: rgba(255, 255, 255, 0.18);
+  border-color: rgba(var(--glas), 0.18);
   text-decoration: none;
 }
 
@@ -653,18 +791,18 @@ th {
 }
 
 .tag-list .badge {
-  background: rgba(255, 255, 255, 0.06);
+  background: rgba(var(--glas), 0.06);
   color: var(--fg-muted);
   font-size: 0.72rem;
   font-weight: 500;
   padding: 0.18rem 0.55rem;
   border-radius: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(var(--glas), 0.1);
   transition: background var(--transition-fast), color var(--transition-fast);
 }
 
 .recipe-card:hover .tag-list .badge {
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(var(--glas), 0.1);
   color: var(--fg);
 }
 
@@ -696,7 +834,7 @@ th {
 .nutrition-grid .item .value {
   font-size: 1.25rem;
   font-weight: 700;
-  color: var(--accent);
+  color: var(--accent-text);
 }
 
 .nutrition-grid .item .label {
@@ -725,7 +863,7 @@ form select,
 form textarea {
   width: 100%;
   padding: 0.6rem 0.9rem;
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(var(--glas), 0.05);
   border: 1px solid var(--glass-border);
   border-radius: var(--radius-sm);
   font-size: 0.95rem;
@@ -740,16 +878,16 @@ form input[type="number"]:hover,
 form input[type="date"]:hover,
 form select:hover,
 form textarea:hover {
-  border-color: rgba(255, 255, 255, 0.2);
-  background: rgba(255, 255, 255, 0.07);
+  border-color: rgba(var(--glas), 0.2);
+  background: rgba(var(--glas), 0.07);
 }
 
 form input:focus,
 form select:focus,
 form textarea:focus {
-  border-color: var(--accent);
+  border-color: var(--accent-text);
   box-shadow: 0 0 0 3px var(--accent-glow);
-  background: rgba(255, 255, 255, 0.08);
+  background: rgba(var(--glas), 0.08);
 }
 
 form input:focus-visible,
@@ -764,7 +902,7 @@ form textarea::placeholder {
 }
 
 form select option {
-  background: #1a1a3e;
+  background: var(--bg-mid);
   color: var(--fg);
 }
 
@@ -773,7 +911,7 @@ form fieldset {
   border-radius: var(--radius-md);
   padding: 1.15rem;
   margin-bottom: 1.15rem;
-  background: rgba(255, 255, 255, 0.03);
+  background: rgba(var(--glas), 0.03);
 }
 
 form fieldset legend {
@@ -783,7 +921,7 @@ form fieldset legend {
 }
 
 form input[type="checkbox"] {
-  accent-color: var(--accent);
+  accent-color: var(--accent-text);
   cursor: pointer;
   transition: transform var(--transition-fast);
 }
@@ -853,7 +991,7 @@ form input[type="checkbox"]:hover {
 .progress-bar-wrap { width: 100%; }
 
 .progress-bar-bg {
-  background: rgba(255, 255, 255, 0.06);
+  background: rgba(var(--glas), 0.06);
   border-radius: 8px;
   height: 20px;
   position: relative;
@@ -864,7 +1002,7 @@ form input[type="checkbox"]:hover {
   position: absolute;
   top: 0; left: 0;
   height: 100%;
-  background: rgba(52, 211, 153, 0.15);
+  background: rgba(var(--gruen-k), 0.15);
   border-radius: 8px;
   transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
 }
@@ -876,7 +1014,7 @@ form input[type="checkbox"]:hover {
   background: linear-gradient(90deg, var(--accent), var(--accent-light));
   border-radius: 8px;
   transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
-  box-shadow: 0 0 8px rgba(124, 92, 252, 0.2);
+  box-shadow: 0 0 8px rgba(var(--akzent-k), 0.2);
 }
 
 .progress-bar-fill.done {
@@ -914,7 +1052,7 @@ form input[type="checkbox"]:hover {
 }
 
 .legend-eaten { background: var(--accent); }
-.legend-planned { background: rgba(52, 211, 153, 0.3); }
+.legend-planned { background: rgba(var(--gruen-k), 0.3); }
 
 /* ================================================================
    MEAL CARDS
@@ -934,51 +1072,51 @@ form input[type="checkbox"]:hover {
   padding: 1.15rem 1.25rem;
   animation: fadeInUp 0.35s ease-out both;
   position: relative;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+  box-shadow: 0 4px 16px rgba(var(--tiefe), 0.12);
   transition: border-color var(--transition-normal), background var(--transition-normal), box-shadow var(--transition-normal), transform var(--transition-fast);
 }
 
 .meal-card:hover {
-  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 8px 28px rgba(var(--tiefe), 0.2);
   background: var(--glass-hover);
 }
 
 .meal-card[data-meal="Fruehstueck"],
 .meal-card[data-meal="fruehstueck"] {
-  border-color: rgba(245, 158, 66, 0.3);
+  border-color: rgba(var(--fruehstueck-k), 0.3);
 }
 
 .meal-card[data-meal="Mittagessen"],
 .meal-card[data-meal="mittagessen"] {
-  border-color: rgba(52, 211, 153, 0.3);
+  border-color: rgba(var(--gruen-k), 0.3);
 }
 
 .meal-card[data-meal="Abendessen"],
 .meal-card[data-meal="abendessen"] {
-  border-color: rgba(167, 139, 250, 0.3);
+  border-color: rgba(var(--abend-k), 0.3);
 }
 
 .meal-card[data-meal="Snack"],
 .meal-card[data-meal="snack"] {
-  border-color: rgba(56, 189, 248, 0.3);
+  border-color: rgba(var(--schule-k), 0.3);
 }
 
 .meal-card[data-meal="Mitnahme"],
 .meal-card[data-meal="mitnahme"] {
-  border-color: rgba(245, 158, 11, 0.3);
+  border-color: rgba(var(--mitnahme-k), 0.3);
 }
 
 .meal-card.meal-infeasible {
-  border-color: rgba(248, 113, 113, 0.4) !important;
+  border-color: rgba(var(--rot-k), 0.4) !important;
 }
 
 .meal-card.meal-partial {
-  border-color: rgba(251, 191, 36, 0.4) !important;
+  border-color: rgba(var(--gelb-k), 0.4) !important;
 }
 
 .meal-card.eaten {
   opacity: 0.6;
-  border-color: rgba(52, 211, 153, 0.3);
+  border-color: rgba(var(--gruen-k), 0.3);
 }
 
 .meal-card:nth-child(1) { animation-delay: 0s; }
@@ -1019,17 +1157,17 @@ form input[type="checkbox"]:hover {
 }
 
 .status-planned {
-  background: rgba(124, 92, 252, 0.15);
-  color: var(--accent);
+  background: rgba(var(--akzent-k), 0.15);
+  color: var(--accent-text);
 }
 
 .status-eaten {
-  background: rgba(52, 211, 153, 0.15);
+  background: rgba(var(--gruen-k), 0.15);
   color: var(--green);
 }
 
 .status-open {
-  background: rgba(255, 255, 255, 0.08);
+  background: rgba(var(--glas), 0.08);
   color: var(--fg-muted);
 }
 
@@ -1058,7 +1196,7 @@ form input[type="checkbox"]:hover {
 }
 
 .btn-swap {
-  background: rgba(255, 255, 255, 0.06);
+  background: rgba(var(--glas), 0.06);
   color: var(--fg);
   border: 1px solid var(--glass-border);
   padding: 0.4rem 0.75rem;
@@ -1074,9 +1212,9 @@ form input[type="checkbox"]:hover {
 }
 
 .btn-swap:hover {
-  background: rgba(255, 255, 255, 0.12);
+  background: rgba(var(--glas), 0.12);
   transform: translateY(-1px);
-  border-color: rgba(255, 255, 255, 0.2);
+  border-color: rgba(var(--glas), 0.2);
 }
 
 .btn-swap:active {
@@ -1084,9 +1222,9 @@ form input[type="checkbox"]:hover {
 }
 
 .btn-commit {
-  background: rgba(52, 211, 153, 0.12);
+  background: rgba(var(--gruen-k), 0.12);
   color: var(--green);
-  border: 1px solid rgba(52, 211, 153, 0.3);
+  border: 1px solid rgba(var(--gruen-k), 0.3);
   padding: 0.4rem 0.75rem;
   border-radius: var(--radius-sm);
   cursor: pointer;
@@ -1100,9 +1238,9 @@ form input[type="checkbox"]:hover {
 }
 
 .btn-commit:hover {
-  background: rgba(52, 211, 153, 0.22);
+  background: rgba(var(--gruen-k), 0.22);
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(52, 211, 153, 0.12);
+  box-shadow: 0 4px 12px rgba(var(--gruen-k), 0.12);
 }
 
 .btn-commit:active {
@@ -1167,13 +1305,13 @@ form input[type="checkbox"]:hover {
 .target-box:hover {
   transform: translateY(-2px);
   background: var(--glass-hover);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 8px 24px rgba(var(--tiefe), 0.2);
 }
 
 .target-box .value {
   font-size: 1.5rem;
   font-weight: 700;
-  color: var(--accent);
+  color: var(--accent-text);
   letter-spacing: -0.02em;
 }
 
@@ -1196,7 +1334,7 @@ form input[type="checkbox"]:hover {
 }
 
 .date-nav-btn {
-  background: rgba(255, 255, 255, 0.06);
+  background: rgba(var(--glas), 0.06);
   color: var(--fg);
   border: 1px solid var(--glass-border);
   padding: 0.45rem 0.8rem;
@@ -1208,9 +1346,9 @@ form input[type="checkbox"]:hover {
 }
 
 .date-nav-btn:hover {
-  background: rgba(255, 255, 255, 0.12);
+  background: rgba(var(--glas), 0.12);
   transform: translateY(-1px);
-  border-color: rgba(255, 255, 255, 0.2);
+  border-color: rgba(var(--glas), 0.2);
 }
 
 .date-nav-btn:active {
@@ -1279,7 +1417,7 @@ form input[type="checkbox"]:hover {
 }
 
 .stock-bar-bg {
-  background: rgba(255, 255, 255, 0.08);
+  background: rgba(var(--glas), 0.08);
   border-radius: 6px;
   height: 16px;
   overflow: hidden;
@@ -1365,8 +1503,8 @@ form input[type="checkbox"]:hover {
    ================================================================ */
 
 .next-meal-card {
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(52, 211, 153, 0.25);
+  background: rgba(var(--glas), 0.05);
+  border: 1px solid rgba(var(--gruen-k), 0.25);
   border-radius: var(--radius-sm);
   padding: 0.85rem;
   margin-top: 0.5rem;
@@ -1434,39 +1572,39 @@ form input[type="checkbox"]:hover {
 }
 
 .goal-badge-protein {
-  background: rgba(52, 211, 153, 0.15);
+  background: rgba(var(--gruen-k), 0.15);
   color: var(--green);
-  border: 1px solid rgba(52, 211, 153, 0.3);
+  border: 1px solid rgba(var(--gruen-k), 0.3);
 }
 
 .goal-badge-carb-ok {
-  background: rgba(96, 165, 250, 0.12);
+  background: rgba(var(--blau-k), 0.12);
   color: var(--status-neutral);
-  border: 1px solid rgba(96, 165, 250, 0.25);
+  border: 1px solid rgba(var(--blau-k), 0.25);
 }
 
 .goal-badge-carb-high {
-  background: rgba(251, 191, 36, 0.12);
+  background: rgba(var(--gelb-k), 0.12);
   color: var(--yellow);
-  border: 1px solid rgba(251, 191, 36, 0.25);
+  border: 1px solid rgba(var(--gelb-k), 0.25);
 }
 
 .goal-badge-carb-low {
-  background: rgba(96, 165, 250, 0.12);
+  background: rgba(var(--blau-k), 0.12);
   color: var(--status-neutral);
-  border: 1px solid rgba(96, 165, 250, 0.25);
+  border: 1px solid rgba(var(--blau-k), 0.25);
 }
 
 .goal-badge-fat-ok {
-  background: rgba(96, 165, 250, 0.12);
+  background: rgba(var(--blau-k), 0.12);
   color: var(--status-neutral);
-  border: 1px solid rgba(96, 165, 250, 0.25);
+  border: 1px solid rgba(var(--blau-k), 0.25);
 }
 
 .goal-badge-fat-limit {
-  background: rgba(251, 191, 36, 0.12);
+  background: rgba(var(--gelb-k), 0.12);
   color: var(--yellow);
-  border: 1px solid rgba(251, 191, 36, 0.25);
+  border: 1px solid rgba(var(--gelb-k), 0.25);
 }
 
 /* ================================================================
@@ -1485,21 +1623,21 @@ form input[type="checkbox"]:hover {
 }
 
 .slot-badge-optimal {
-  background: rgba(52, 211, 153, 0.15);
+  background: rgba(var(--gruen-k), 0.15);
   color: var(--green);
 }
 
 .slot-badge-replace {
-  background: rgba(251, 191, 36, 0.15);
+  background: rgba(var(--gelb-k), 0.15);
   color: var(--yellow);
 }
 
 .meal-card.slot-optimal {
-  border-color: rgba(52, 211, 153, 0.35);
+  border-color: rgba(var(--gruen-k), 0.35);
 }
 
 .meal-card.slot-replace_recommended {
-  border-color: rgba(251, 191, 36, 0.35);
+  border-color: rgba(var(--gelb-k), 0.35);
 }
 
 /* ================================================================
@@ -1507,9 +1645,9 @@ form input[type="checkbox"]:hover {
    ================================================================ */
 
 .btn-confirm-meal {
-  background: rgba(52, 211, 153, 0.12);
+  background: rgba(var(--gruen-k), 0.12);
   color: var(--green);
-  border: 1px solid rgba(52, 211, 153, 0.3);
+  border: 1px solid rgba(var(--gruen-k), 0.3);
   padding: 0.5rem 1rem;
   border-radius: var(--radius-sm);
   cursor: pointer;
@@ -1524,9 +1662,9 @@ form input[type="checkbox"]:hover {
 }
 
 .btn-confirm-meal:hover {
-  background: rgba(52, 211, 153, 0.22);
+  background: rgba(var(--gruen-k), 0.22);
   transform: translateY(-1px);
-  box-shadow: 0 4px 16px rgba(52, 211, 153, 0.15);
+  box-shadow: 0 4px 16px rgba(var(--gruen-k), 0.15);
 }
 
 .btn-confirm-meal:active {
@@ -1534,7 +1672,7 @@ form input[type="checkbox"]:hover {
 }
 
 .btn-swap-icon {
-  background: rgba(255, 255, 255, 0.06);
+  background: rgba(var(--glas), 0.06);
   color: var(--fg-muted);
   border: 1px solid var(--glass-border);
   padding: 0.45rem;
@@ -1550,10 +1688,10 @@ form input[type="checkbox"]:hover {
 }
 
 .btn-swap-icon:hover {
-  background: rgba(255, 255, 255, 0.12);
+  background: rgba(var(--glas), 0.12);
   color: var(--fg);
   transform: rotate(15deg);
-  border-color: rgba(255, 255, 255, 0.2);
+  border-color: rgba(var(--glas), 0.2);
 }
 
 .btn-swap-icon:active {
@@ -1561,9 +1699,9 @@ form input[type="checkbox"]:hover {
 }
 
 .btn-swap-primary {
-  background: rgba(251, 191, 36, 0.12);
+  background: rgba(var(--gelb-k), 0.12);
   color: var(--yellow);
-  border: 1px solid rgba(251, 191, 36, 0.3);
+  border: 1px solid rgba(var(--gelb-k), 0.3);
   padding: 0.5rem 1rem;
   border-radius: var(--radius-sm);
   cursor: pointer;
@@ -1578,9 +1716,9 @@ form input[type="checkbox"]:hover {
 }
 
 .btn-swap-primary:hover {
-  background: rgba(251, 191, 36, 0.22);
+  background: rgba(var(--gelb-k), 0.22);
   transform: translateY(-1px);
-  box-shadow: 0 4px 16px rgba(251, 191, 36, 0.12);
+  box-shadow: 0 4px 16px rgba(var(--gelb-k), 0.12);
 }
 
 .btn-swap-primary:active {
@@ -1623,12 +1761,12 @@ form input[type="checkbox"]:hover {
   cursor: pointer;
   transition: all var(--transition-fast);
   border: 1px dashed var(--glass-border);
-  background: rgba(255, 255, 255, 0.04);
+  background: rgba(var(--glas), 0.04);
   color: var(--fg);
 }
 
 .supplement-pill:hover {
-  background: rgba(255, 255, 255, 0.08);
+  background: rgba(var(--glas), 0.08);
   transform: translateY(-1px);
 }
 
@@ -1638,8 +1776,8 @@ form input[type="checkbox"]:hover {
 
 .supplement-pill.taken {
   border-style: solid;
-  border-color: rgba(52, 211, 153, 0.4);
-  background: rgba(52, 211, 153, 0.08);
+  border-color: rgba(var(--gruen-k), 0.4);
+  background: rgba(var(--gruen-k), 0.08);
 }
 
 .supplement-pill.taken .supplement-pill-name {
@@ -1648,8 +1786,8 @@ form input[type="checkbox"]:hover {
 }
 
 .supplement-pill-conditional {
-  border-color: rgba(251, 191, 36, 0.4);
-  background: rgba(251, 191, 36, 0.06);
+  border-color: rgba(var(--gelb-k), 0.4);
+  background: rgba(var(--gelb-k), 0.06);
 }
 
 .supplement-pill-name {
@@ -1689,7 +1827,7 @@ form input[type="checkbox"]:hover {
 
 .deficit-item {
   padding: 0.5rem 0;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  border-bottom: 1px solid rgba(var(--glas), 0.06);
 }
 
 .deficit-item:last-child { border-bottom: none; }
@@ -1723,7 +1861,7 @@ form input[type="checkbox"]:hover {
    ================================================================ */
 
 .goal-hero {
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.04));
+  background: linear-gradient(135deg, rgba(var(--glas), 0.08), rgba(var(--glas), 0.04));
   backdrop-filter: var(--blur);
   -webkit-backdrop-filter: var(--blur);
   border: 1px solid var(--glass-border);
@@ -1747,21 +1885,21 @@ form input[type="checkbox"]:hover {
 }
 
 .goal-phase-badge.phase-cut {
-  background: rgba(251, 191, 36, 0.15);
+  background: rgba(var(--gelb-k), 0.15);
   color: var(--yellow);
-  border: 1px solid rgba(251, 191, 36, 0.3);
+  border: 1px solid rgba(var(--gelb-k), 0.3);
 }
 
 .goal-phase-badge.phase-bulk {
-  background: rgba(52, 211, 153, 0.15);
+  background: rgba(var(--gruen-k), 0.15);
   color: var(--green);
-  border: 1px solid rgba(52, 211, 153, 0.3);
+  border: 1px solid rgba(var(--gruen-k), 0.3);
 }
 
 .goal-phase-badge.phase-maintain {
-  background: rgba(96, 165, 250, 0.15);
+  background: rgba(var(--blau-k), 0.15);
   color: var(--status-neutral);
-  border: 1px solid rgba(96, 165, 250, 0.25);
+  border: 1px solid rgba(var(--blau-k), 0.25);
 }
 
 .goal-statement {
@@ -1791,9 +1929,9 @@ form input[type="checkbox"]:hover {
   transition: width 0.3s ease;
 }
 
-.macro-split-protein { background: rgba(52, 211, 153, 0.7); }
-.macro-split-carbs { background: rgba(96, 165, 250, 0.6); }
-.macro-split-fat { background: rgba(251, 191, 36, 0.6); }
+.macro-split-protein { background: rgba(var(--gruen-k), 0.7); }
+.macro-split-carbs { background: rgba(var(--blau-k), 0.6); }
+.macro-split-fat { background: rgba(var(--gelb-k), 0.6); }
 
 .macro-split-legend {
   display: flex;
@@ -1813,9 +1951,9 @@ form input[type="checkbox"]:hover {
   vertical-align: middle;
 }
 
-.macro-split-legend .legend-protein::before { background: rgba(52, 211, 153, 0.7); }
-.macro-split-legend .legend-carbs::before { background: rgba(96, 165, 250, 0.6); }
-.macro-split-legend .legend-fat::before { background: rgba(251, 191, 36, 0.6); }
+.macro-split-legend .legend-protein::before { background: rgba(var(--gruen-k), 0.7); }
+.macro-split-legend .legend-carbs::before { background: rgba(var(--blau-k), 0.6); }
+.macro-split-legend .legend-fat::before { background: rgba(var(--gelb-k), 0.6); }
 
 /* ================================================================
    RECIPE GOAL MATCH BADGE
@@ -1832,21 +1970,21 @@ form input[type="checkbox"]:hover {
 }
 
 .goal-match-badge.high {
-  background: rgba(52, 211, 153, 0.15);
+  background: rgba(var(--gruen-k), 0.15);
   color: var(--green);
-  border: 1px solid rgba(52, 211, 153, 0.3);
+  border: 1px solid rgba(var(--gruen-k), 0.3);
 }
 
 .goal-match-badge.mid {
-  background: rgba(251, 191, 36, 0.12);
+  background: rgba(var(--gelb-k), 0.12);
   color: var(--yellow);
-  border: 1px solid rgba(251, 191, 36, 0.25);
+  border: 1px solid rgba(var(--gelb-k), 0.25);
 }
 
 .goal-match-badge.low {
-  background: rgba(248, 113, 113, 0.12);
+  background: rgba(var(--rot-k), 0.12);
   color: var(--red);
-  border: 1px solid rgba(248, 113, 113, 0.25);
+  border: 1px solid rgba(var(--rot-k), 0.25);
 }
 
 .recipe-goal-info {
@@ -1874,14 +2012,14 @@ form input[type="checkbox"]:hover {
   border: 1px solid var(--glass-border);
   border-radius: var(--radius-md);
   padding: 1.1rem 1.15rem;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+  box-shadow: 0 4px 16px rgba(var(--tiefe), 0.12);
   transition: background var(--transition-fast), transform var(--transition-fast), box-shadow var(--transition-normal);
 }
 
 .shopping-card:hover {
   background: var(--glass-hover);
   transform: translateY(-1px);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 8px 24px rgba(var(--tiefe), 0.2);
 }
 
 .shopping-card-header {
@@ -1900,7 +2038,7 @@ form input[type="checkbox"]:hover {
 .shopping-card-amount {
   font-size: 0.88rem;
   font-weight: 600;
-  color: var(--accent);
+  color: var(--accent-text);
 }
 
 .shopping-card-reasons {
@@ -1920,21 +2058,21 @@ form input[type="checkbox"]:hover {
 }
 
 .reason-badge-missing {
-  background: rgba(248, 113, 113, 0.12);
+  background: rgba(var(--rot-k), 0.12);
   color: var(--red);
-  border: 1px solid rgba(248, 113, 113, 0.2);
+  border: 1px solid rgba(var(--rot-k), 0.2);
 }
 
 .reason-badge-low {
-  background: rgba(251, 191, 36, 0.12);
+  background: rgba(var(--gelb-k), 0.12);
   color: var(--yellow);
-  border: 1px solid rgba(251, 191, 36, 0.2);
+  border: 1px solid rgba(var(--gelb-k), 0.2);
 }
 
 .reason-badge-minstock {
-  background: rgba(96, 165, 250, 0.12);
+  background: rgba(var(--blau-k), 0.12);
   color: var(--status-neutral);
-  border: 1px solid rgba(96, 165, 250, 0.2);
+  border: 1px solid rgba(var(--blau-k), 0.2);
 }
 
 .shopping-impact {
@@ -1957,8 +2095,8 @@ form input[type="checkbox"]:hover {
 }
 
 .einkauf-warnung {
-  background: rgba(251, 191, 36, 0.1);
-  border: 1px solid rgba(251, 191, 36, 0.25);
+  background: rgba(var(--gelb-k), 0.1);
+  border: 1px solid rgba(var(--gelb-k), 0.25);
   border-radius: var(--radius-md);
   padding: 0.7rem 0.9rem;
   margin-bottom: 0.9rem;
@@ -1967,9 +2105,9 @@ form input[type="checkbox"]:hover {
 }
 
 .reason-badge-lager {
-  background: rgba(52, 211, 153, 0.12);
+  background: rgba(var(--gruen-k), 0.12);
   color: var(--green, #34d399);
-  border: 1px solid rgba(52, 211, 153, 0.2);
+  border: 1px solid rgba(var(--gruen-k), 0.2);
 }
 
 .shopping-restbedarf {
@@ -2097,7 +2235,7 @@ form input[type="checkbox"]:hover {
 .modal-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(15, 12, 41, 0.75);
+  background: rgba(var(--grund-k), 0.75);
   backdrop-filter: blur(8px);
   display: flex;
   align-items: center;
@@ -2108,15 +2246,15 @@ form input[type="checkbox"]:hover {
 }
 
 .modal-content {
-  background: linear-gradient(135deg, #1a1a3e, #24243e);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: linear-gradient(135deg, var(--bg-mid), var(--bg-end));
+  border: 1px solid rgba(var(--glas), 0.1);
   border-radius: var(--radius-lg);
   max-width: 700px;
   width: 100%;
   max-height: 85vh;
   overflow-y: auto;
   padding: 1.75rem;
-  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.55);
+  box-shadow: 0 24px 80px rgba(var(--tiefe), 0.55);
   animation: fadeInScale 0.25s ease-out;
 }
 
@@ -2130,7 +2268,7 @@ form input[type="checkbox"]:hover {
 .modal-header h2 { margin: 0; font-size: 1.2rem; }
 
 .modal-close {
-  background: rgba(255, 255, 255, 0.06);
+  background: rgba(var(--glas), 0.06);
   border: none;
   font-size: 1.2rem;
   cursor: pointer;
@@ -2145,7 +2283,7 @@ form input[type="checkbox"]:hover {
 
 .modal-close:hover {
   color: var(--fg);
-  background: rgba(255, 255, 255, 0.12);
+  background: rgba(var(--glas), 0.12);
   transform: scale(1.05);
 }
 
@@ -2184,7 +2322,7 @@ form input[type="checkbox"]:hover {
 }
 
 .swap-card:hover {
-  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 8px 28px rgba(var(--tiefe), 0.3);
   transform: translateY(-3px);
   background: var(--glass-hover);
 }
@@ -2194,11 +2332,11 @@ form input[type="checkbox"]:hover {
 }
 
 .swap-card-feasible {
-  border: 1px solid rgba(52, 211, 153, 0.4);
+  border: 1px solid rgba(var(--gruen-k), 0.4);
 }
 
 .swap-card-infeasible {
-  border: 1px dashed rgba(255, 255, 255, 0.15);
+  border: 1px dashed rgba(var(--glas), 0.15);
   opacity: 0.65;
 }
 
@@ -2223,10 +2361,10 @@ form input[type="checkbox"]:hover {
   margin-bottom: 0.3rem;
 }
 
-.swap-score-badge { font-weight: 600; color: var(--accent); }
+.swap-score-badge { font-weight: 600; color: var(--accent-text); }
 
 .swap-score-bar-bg {
-  background: rgba(255, 255, 255, 0.08);
+  background: rgba(var(--glas), 0.08);
   border-radius: 4px;
   height: 6px;
   overflow: hidden;
@@ -2253,7 +2391,7 @@ form input[type="checkbox"]:hover {
 }
 
 .swap-card-tags .badge {
-  background: rgba(255, 255, 255, 0.06);
+  background: rgba(var(--glas), 0.06);
   color: var(--fg-muted);
   font-size: 0.68rem;
   padding: 0.1rem 0.4rem;
@@ -2295,7 +2433,7 @@ form input[type="checkbox"]:hover {
 }
 
 .shopping-table th {
-  background: rgba(255, 255, 255, 0.04);
+  background: rgba(var(--glas), 0.04);
 }
 
 details { margin-top: 0.5rem; }
@@ -2344,11 +2482,11 @@ pre { font-size: 0.8rem; overflow-x: auto; color: var(--fg-muted); }
 }
 
 .supplement-item:hover {
-  background: rgba(255, 255, 255, 0.04);
+  background: rgba(var(--glas), 0.04);
 }
 
 .supplement-item input[type="checkbox"] {
-  accent-color: var(--accent);
+  accent-color: var(--accent-text);
   width: 16px;
   height: 16px;
   cursor: pointer;
@@ -2439,7 +2577,7 @@ pre { font-size: 0.8rem; overflow-x: auto; color: var(--fg-muted); }
 .week-day:hover {
   background: var(--glass-hover);
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 4px 12px rgba(var(--tiefe), 0.15);
 }
 
 .week-day:active {
@@ -2447,13 +2585,13 @@ pre { font-size: 0.8rem; overflow-x: auto; color: var(--fg-muted); }
 }
 
 .week-day-today {
-  border-color: var(--accent);
+  border-color: var(--accent-text);
   box-shadow: 0 0 0 1px var(--accent-glow);
 }
 
 .week-day-selected {
-  background: rgba(124, 92, 252, 0.2);
-  border-color: var(--accent);
+  background: rgba(var(--akzent-k), 0.2);
+  border-color: var(--accent-text);
 }
 
 .week-day-warning {
@@ -2483,15 +2621,15 @@ pre { font-size: 0.8rem; overflow-x: auto; color: var(--fg-muted); }
   margin-bottom: 0.3rem;
   display: inline-block;
   color: var(--fg-muted);
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(var(--glas), 0.05);
 }
 
-.week-daytype-arbeit { color: var(--accent); background: rgba(124, 92, 252, 0.15); }
-.week-daytype-schule { color: #38bdf8; background: rgba(56, 189, 248, 0.15); }
-.week-daytype-urlaub { color: var(--green); background: rgba(52, 211, 153, 0.15); }
-.week-daytype-feiertag { color: var(--yellow); background: rgba(251, 191, 36, 0.15); }
-.week-daytype-krank { color: var(--red); background: rgba(248, 113, 113, 0.15); }
-.week-daytype-wochenende { color: var(--fg-muted); background: rgba(255, 255, 255, 0.05); }
+.week-daytype-arbeit { color: var(--accent-text); background: rgba(var(--akzent-k), 0.15); }
+.week-daytype-schule { color: var(--schule); background: rgba(var(--schule-k), 0.15); }
+.week-daytype-urlaub { color: var(--green); background: rgba(var(--gruen-k), 0.15); }
+.week-daytype-feiertag { color: var(--yellow); background: rgba(var(--gelb-k), 0.15); }
+.week-daytype-krank { color: var(--red); background: rgba(var(--rot-k), 0.15); }
+.week-daytype-wochenende { color: var(--fg-muted); background: rgba(var(--glas), 0.05); }
 
 .week-dots {
   display: flex;
@@ -2518,7 +2656,7 @@ pre { font-size: 0.8rem; overflow-x: auto; color: var(--fg-muted); }
 .pin-badge {
   display: inline-flex;
   align-items: center;
-  color: var(--accent);
+  color: var(--accent-text);
   margin-left: 0.25rem;
   vertical-align: middle;
 }
@@ -2533,8 +2671,8 @@ pre { font-size: 0.8rem; overflow-x: auto; color: var(--fg-muted); }
   gap: 0.35rem;
   padding: 0.45rem 0.65rem;
   margin-top: 0.4rem;
-  background: rgba(248, 113, 113, 0.1);
-  border: 1px solid rgba(248, 113, 113, 0.25);
+  background: rgba(var(--rot-k), 0.1);
+  border: 1px solid rgba(var(--rot-k), 0.25);
   border-radius: var(--radius-sm);
   color: var(--red);
   font-size: 0.82rem;
@@ -2572,7 +2710,7 @@ pre { font-size: 0.8rem; overflow-x: auto; color: var(--fg-muted); }
   display: flex;
   gap: 0.4rem;
   margin-bottom: 1.25rem;
-  background: rgba(255, 255, 255, 0.03);
+  background: rgba(var(--glas), 0.03);
   border-radius: var(--radius-md);
   padding: 0.25rem;
   border: 1px solid var(--glass-border);
@@ -2596,16 +2734,16 @@ pre { font-size: 0.8rem; overflow-x: auto; color: var(--fg-muted); }
 }
 
 .tab-btn:hover {
-  background: rgba(255, 255, 255, 0.06);
+  background: rgba(var(--glas), 0.06);
   color: var(--fg);
   transform: none;
 }
 
 .tab-btn.active {
-  background: rgba(124, 92, 252, 0.18);
-  border-color: rgba(124, 92, 252, 0.35);
-  color: var(--accent);
-  box-shadow: 0 2px 8px rgba(124, 92, 252, 0.15);
+  background: rgba(var(--akzent-k), 0.18);
+  border-color: rgba(var(--akzent-k), 0.35);
+  color: var(--accent-text);
+  box-shadow: 0 2px 8px rgba(var(--akzent-k), 0.15);
 }
 
 /* ================================================================
@@ -2649,13 +2787,13 @@ pre { font-size: 0.8rem; overflow-x: auto; color: var(--fg-muted); }
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  background: rgba(255, 255, 255, 0.04);
+  background: rgba(var(--glas), 0.04);
 }
 
 .coach-score span {
   font-size: 1.65rem;
   font-weight: 750;
-  color: var(--accent);
+  color: var(--accent-text);
 }
 
 .coach-score small {
@@ -2691,7 +2829,7 @@ pre { font-size: 0.8rem; overflow-x: auto; color: var(--fg-muted); }
   border: 1px solid var(--glass-border);
   border-radius: var(--radius-sm);
   padding: 0.65rem;
-  background: rgba(255, 255, 255, 0.035);
+  background: rgba(var(--glas), 0.035);
 }
 
 .coach-metrics strong {
@@ -2775,7 +2913,7 @@ pre { font-size: 0.8rem; overflow-x: auto; color: var(--fg-muted); }
 .adhoc-form input {
   width: 100%;
   padding: 0.55rem 0.85rem;
-  background: rgba(255, 255, 255, 0.06);
+  background: rgba(var(--glas), 0.06);
   border: 1px solid var(--glass-border);
   border-radius: var(--radius-sm);
   font-size: 0.95rem;
@@ -2786,7 +2924,7 @@ pre { font-size: 0.8rem; overflow-x: auto; color: var(--fg-muted); }
 }
 
 .adhoc-form input:focus {
-  border-color: var(--accent);
+  border-color: var(--accent-text);
   box-shadow: 0 0 0 3px var(--accent-glow);
 }
 
@@ -2797,7 +2935,7 @@ pre { font-size: 0.8rem; overflow-x: auto; color: var(--fg-muted); }
 .adhoc-search input {
   width: 100%;
   padding: 0.55rem 0.85rem;
-  background: rgba(255, 255, 255, 0.06);
+  background: rgba(var(--glas), 0.06);
   border: 1px solid var(--glass-border);
   border-radius: var(--radius-sm);
   font-size: 0.95rem;
@@ -2808,7 +2946,7 @@ pre { font-size: 0.8rem; overflow-x: auto; color: var(--fg-muted); }
 }
 
 .adhoc-search input:focus {
-  border-color: var(--accent);
+  border-color: var(--accent-text);
   box-shadow: 0 0 0 3px var(--accent-glow);
 }
 
@@ -2832,7 +2970,7 @@ pre { font-size: 0.8rem; overflow-x: auto; color: var(--fg-muted); }
 }
 
 .adhoc-recipe-item:hover {
-  background: rgba(255, 255, 255, 0.08);
+  background: rgba(var(--glas), 0.08);
 }
 
 .adhoc-recipe-item strong {
@@ -2861,7 +2999,7 @@ pre { font-size: 0.8rem; overflow-x: auto; color: var(--fg-muted); }
   flex: 0;
   padding: 0.4rem 0.85rem;
   border-radius: var(--radius-sm);
-  background: rgba(255, 255, 255, 0.06);
+  background: rgba(var(--glas), 0.06);
   border: 1px solid var(--glass-border);
   color: var(--fg-muted);
   font-weight: 500;
@@ -2871,14 +3009,14 @@ pre { font-size: 0.8rem; overflow-x: auto; color: var(--fg-muted); }
 }
 
 .stats-period-toggle button:hover {
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(var(--glas), 0.1);
   transform: none;
 }
 
 .stats-period-toggle button.active {
-  background: rgba(124, 92, 252, 0.2);
-  border-color: var(--accent);
-  color: var(--accent);
+  background: rgba(var(--akzent-k), 0.2);
+  border-color: var(--accent-text);
+  color: var(--accent-text);
 }
 
 .stats-summary {
@@ -2895,7 +3033,7 @@ pre { font-size: 0.8rem; overflow-x: auto; color: var(--fg-muted); }
 .stats-summary-value {
   font-size: 1.4rem;
   font-weight: 700;
-  color: var(--accent);
+  color: var(--accent-text);
 }
 
 .stats-summary-label {
@@ -3018,7 +3156,7 @@ pre { font-size: 0.8rem; overflow-x: auto; color: var(--fg-muted); }
 .supplement-cond-badge {
   font-size: 0.65rem;
   color: var(--fg-muted);
-  background: rgba(255, 255, 255, 0.06);
+  background: rgba(var(--glas), 0.06);
   padding: 0.1rem 0.35rem;
   border-radius: 6px;
   margin-left: 0.25rem;
@@ -3031,8 +3169,8 @@ pre { font-size: 0.8rem; overflow-x: auto; color: var(--fg-muted); }
   gap: 0.4rem;
   padding: 0.5rem 0.75rem;
   margin-bottom: 0.75rem;
-  background: rgba(251, 191, 36, 0.1);
-  border: 1px solid rgba(251, 191, 36, 0.25);
+  background: rgba(var(--gelb-k), 0.1);
+  border: 1px solid rgba(var(--gelb-k), 0.25);
   border-radius: var(--radius-sm);
   font-size: 0.82rem;
   color: var(--yellow);
@@ -3060,8 +3198,15 @@ pre { font-size: 0.8rem; overflow-x: auto; color: var(--fg-muted); }
   }
 
   .progress-row {
-    grid-template-columns: 80px 1fr;
+    /* ★ `auto` statt fester 80 px. "Kohlenhydrate" braucht bei dieser
+       Schriftgroesse rund 95 px und stiess bei 390 px unmittelbar an den
+       Balken - kein Umbruch, kein Abstand, nur zwei Dinge, die sich
+       beruehren. Mit `auto` nimmt sich die Beschriftung, was sie braucht,
+       und der Balken bekommt den Rest. */
+    grid-template-columns: auto 1fr;
   }
+  .progress-label { white-space: nowrap; }
+  .progress-bar-wrap { min-width: 0; }
   .progress-numbers {
     grid-column: 1 / -1;
     text-align: left;
@@ -3142,7 +3287,7 @@ pre { font-size: 0.8rem; overflow-x: auto; color: var(--fg-muted); }
 }
 
 .week-plan-day-today {
-  border-color: var(--accent);
+  border-color: var(--accent-text);
   box-shadow: 0 0 0 1px var(--accent-glow);
 }
 
@@ -3177,9 +3322,9 @@ pre { font-size: 0.8rem; overflow-x: auto; color: var(--fg-muted); }
   font-weight: 600;
   padding: 0.1rem 0.45rem;
   border-radius: 10px;
-  background: rgba(124, 92, 252, 0.2);
-  color: var(--accent);
-  border: 1px solid rgba(124, 92, 252, 0.35);
+  background: rgba(var(--akzent-k), 0.2);
+  color: var(--accent-text);
+  border: 1px solid rgba(var(--akzent-k), 0.35);
   text-transform: uppercase;
   letter-spacing: 0.03em;
 }
@@ -3193,7 +3338,7 @@ pre { font-size: 0.8rem; overflow-x: auto; color: var(--fg-muted); }
 .week-plan-kcal {
   font-size: 0.88rem;
   font-weight: 600;
-  color: var(--accent);
+  color: var(--accent-text);
 }
 
 .week-plan-protein {
@@ -3249,7 +3394,7 @@ pre { font-size: 0.8rem; overflow-x: auto; color: var(--fg-muted); }
 }
 
 .week-plan-meal-pinned {
-  color: var(--accent);
+  color: var(--accent-text);
   margin-left: 0.15rem;
   display: inline-flex;
   align-items: center;
@@ -3299,9 +3444,9 @@ pre { font-size: 0.8rem; overflow-x: auto; color: var(--fg-muted); }
   font-weight: 600;
   padding: 0.12rem 0.45rem;
   border-radius: 10px;
-  background: rgba(248, 113, 113, 0.18);
+  background: rgba(var(--rot-k), 0.18);
   color: var(--red);
-  border: 1px solid rgba(248, 113, 113, 0.3);
+  border: 1px solid rgba(var(--rot-k), 0.3);
   text-transform: capitalize;
   letter-spacing: 0.01em;
 }
@@ -3335,17 +3480,17 @@ pre { font-size: 0.8rem; overflow-x: auto; color: var(--fg-muted); }
 }
 
 .allergen-check-label:hover {
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(var(--glas), 0.05);
 }
 
 .allergen-check-label input[type="checkbox"] {
   width: 16px;
   height: 16px;
-  accent-color: var(--accent);
+  accent-color: var(--accent-text);
   cursor: pointer;
 }
 
 .allergen-check-label input[type="checkbox"]:checked + span {
-  color: var(--accent);
+  color: var(--accent-text);
   font-weight: 500;
 }

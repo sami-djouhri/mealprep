@@ -374,7 +374,7 @@ class PlanningService:
             "lunch": 2, "dinner": 3, "snack": 4,
         }
         slot_labels = {
-            "breakfast": "Fruehstueck",
+            "breakfast": "Frühstück",
             "packed_lunch": "Mitnahme",
             "lunch": "Mittagessen",
             "dinner": "Abendessen",

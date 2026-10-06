@@ -10,16 +10,16 @@
 {% if bestand_unbekannt %}
 <div class="einkauf-warnung">
   Das Lager antwortet gerade nicht. Angezeigt wird die geplante Menge, nicht der
-  Restbedarf. Abhaken ist so lange nicht moeglich.
+  Restbedarf. Abhaken ist so lange nicht möglich.
 </div>
 {% endif %}
 
-{% if unverknuepft %}
+{% if unverknüpft %}
 <div class="einkauf-warnung">
-  {{ unverknuepft }} {% if unverknuepft == 1 %}Zutat ist{% else %}Zutaten sind{% endif %}
-  keinem Lager-Produkt zugeordnet. Fuer sie gibt es keinen Bestand, gegen den
+  {{ unverknüpft }} {% if unverknüpft == 1 %}Zutat ist{% else %}Zutaten sind{% endif %}
+  keinem Lager-Produkt zugeordnet. Für sie gibt es keinen Bestand, gegen den
   gerechnet werden kann, und sie lassen sich nicht einbuchen.
-  <a href="/zutaten">Zutaten pruefen</a>
+  <a href="/zutaten">Zutaten prüfen</a>
 </div>
 {% endif %}
 
@@ -32,7 +32,7 @@
       <span class="shopping-card-amount">
         {% if l.gekauft_am %}
           {{ l.gekaufte_menge }} {{ l.unit }} gekauft
-        {% elif l.bestand_unbekannt or not l.verknuepft %}
+        {% elif l.bestand_unbekannt or not l.verknüpft %}
           {{ l.geplant }} {{ l.unit }}
         {% else %}
           {{ l.noch_noetig }} {{ l.unit }}
@@ -51,7 +51,7 @@
     <div class="shopping-card-reasons">
       {% for r in l.reasons %}
         {% if r == "MISSING_FOR_PLAN" %}
-        <span class="reason-badge reason-badge-missing">Fuer Plan</span>
+        <span class="reason-badge reason-badge-missing">Für Plan</span>
         {% elif r == "LOW_RUNWAY" %}
         <span class="reason-badge reason-badge-low">Vorrat niedrig</span>
         {% elif r == "BELOW_MIN_STOCK" %}
@@ -73,9 +73,9 @@
     <div class="shopping-card-aktion">
       {% if l.gekauft_am %}
         <button type="button" class="btn-haken-zurueck"
-                data-line-id="{{ l.id }}">Haken zuruecknehmen</button>
-      {% elif not l.verknuepft %}
-        <span class="shopping-gesperrt">Nicht mit dem Lager verknuepft</span>
+                data-line-id="{{ l.id }}">Haken zurücknehmen</button>
+      {% elif not l.verknüpft %}
+        <span class="shopping-gesperrt">Nicht mit dem Lager verknüpft</span>
       {% elif l.bestand_unbekannt %}
         <span class="shopping-gesperrt">Lager nicht erreichbar</span>
       {% else %}
@@ -94,7 +94,7 @@
 {% else %}
 <p style="color:var(--fg-muted)">Keine offene Einkaufsliste.</p>
 {% endif %}
-<p style="margin-top:1rem"><a href="/">Zurueck</a></p>
+<p style="margin-top:1rem"><a href="/">Zurück</a></p>
 
 <script>
 // Abhaken bucht in den Lager-Bestand. Der Fehlerfall bleibt an der Zeile

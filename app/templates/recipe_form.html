@@ -23,7 +23,7 @@
   <input type="text" id="tags" name="tags" placeholder="z.B. schnell, vegan, meal-prep" value="{{ recipe.tags | join(', ') if recipe and recipe.tags else '' }}">
 
   <fieldset>
-    <legend>Naehrwerte pro Portion</legend>
+    <legend>Nährwerte pro Portion</legend>
     <div class="nutrition-grid">
       <div>
         <label for="nutrition_kcal">kcal</label>
@@ -56,7 +56,7 @@
     <div id="ingredients-container">
       <!-- JS adds rows here -->
     </div>
-    <button type="button" class="btn-secondary" onclick="addIngredientRow()">Zutat hinzufuegen</button>
+    <button type="button" class="btn-secondary" onclick="addIngredientRow()">Zutat hinzufügen</button>
   </fieldset>
 
   <button type="submit">{{ "Aenderungen speichern" if edit_mode else "Rezept speichern" }}</button>
@@ -76,7 +76,7 @@
     <div class="field field-name">
       <label>Zutat</label>
       <select name="ing_id[]" required>
-        <option value="">-- waehlen --</option>
+        <option value="">-- wählen --</option>
         {% for ing in all_ingredients %}
         <option value="{{ ing.id }}">{{ ing.name_canonical }}</option>
         {% endfor %}
@@ -91,7 +91,7 @@
       <select name="ing_unit[]">
         <option value="g">g</option>
         <option value="ml">ml</option>
-        <option value="piece">Stueck</option>
+        <option value="piece">Stück</option>
       </select>
     </div>
     <div class="field field-opt">

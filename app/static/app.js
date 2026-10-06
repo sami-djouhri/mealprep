@@ -18,7 +18,10 @@ const STATUS_LABELS = {
 };
 
 const MEAL_COLORS = {
-  "Fruehstueck": "var(--meal-breakfast)",
+  // ★ Schluessel ist die BESCHRIFTUNG, die der Server schickt - seit dem
+  // 2026-09-27 mit Umlauten. Der data-meal-Wert unten bleibt dagegen
+  // absichtlich ASCII, an ihm haengen die CSS-Selektoren.
+  "Frühstück": "var(--meal-breakfast)",
   "Mittagessen": "var(--meal-lunch)",
   "Abendessen": "var(--meal-dinner)",
   "Snack": "var(--meal-snack)",
@@ -95,7 +98,7 @@ function generateRecipeImage(canvas, recipeName, tags, ingredientCategories) {
   tags = tags || [];
   const cats = ingredientCategories || [];
   let baseHue = 260; // default purple
-  if (tags.includes("fruehstueck") || tags.includes("Fruehstueck")) baseHue = 30;
+  if (tags.includes("frühstück") || tags.includes("fruehstueck") || tags.includes("Fruehstueck")) baseHue = 30;
   else if (tags.includes("mittagessen") || tags.includes("Mittagessen")) baseHue = 155;
   else if (tags.includes("abendessen") || tags.includes("Abendessen")) baseHue = 265;
   else if (tags.includes("snack") || tags.includes("Snack")) baseHue = 200;
@@ -279,7 +282,9 @@ function getMealDotColor(label) {
 function getMealDataAttr(label) {
   if (!label) return "";
   const l = label.toLowerCase();
-  if (l.includes("frueh") || l.includes("breakfast")) return "Fruehstueck";
+  // Beide Schreibweisen, weil aeltere Beschriftungen noch ohne Umlaut
+  // aus der Datenbank kommen koennen.
+  if (l.includes("früh") || l.includes("frueh") || l.includes("breakfast")) return "Fruehstueck";
   if (l.includes("mitnah") || l.includes("packed")) return "Mitnahme";
   if (l.includes("mittag") || l.includes("lunch")) return "Mittagessen";
   if (l.includes("abend") || l.includes("dinner")) return "Abendessen";
@@ -697,23 +702,23 @@ function renderCoachTab() {
       <div class="glass-card coach-card">
         <h3>Training</h3>
         ${fitness.reachable ? `
-          <p>${plannedDay ? escHtml(plannedDay.name) : "Kein Training im aktiven Plan fuer diesen Tag."}</p>
+          <p>${plannedDay ? escHtml(plannedDay.name) : "Kein Training im aktiven Plan für diesen Tag."}</p>
           <p style="color:var(--fg-muted)">${workouts.length ? `${workouts.length} Workout-Eintrag${workouts.length === 1 ? "" : "e"} heute` : "Noch kein Workout erfasst."}</p>
         ` : `<p style="color:var(--fg-muted)">Fitness ist nicht erreichbar.</p>`}
       </div>
 
       <div class="glass-card coach-card">
-        <h3>Naechste Schritte</h3>
+        <h3>Nächste Schritte</h3>
         <ul class="coach-actions">${actionList}</ul>
       </div>
 
       <div class="glass-card coach-card">
         <h3>Timing</h3>
-        ${timingList || `<p style="color:var(--fg-muted)">Kein besonderes Timing noetig.</p>`}
+        ${timingList || `<p style="color:var(--fg-muted)">Kein besonderes Timing nötig.</p>`}
       </div>
 
       <div class="glass-card coach-card coach-wide">
-        <h3>Ablaufende Vorraete</h3>
+        <h3>Ablaufende Vorräte</h3>
         ${expiringList || `<p style="color:var(--fg-muted)">Keine kritischen Vorräte in den naechsten 3 Tagen.</p>`}
       </div>
     </section>`;
@@ -760,7 +765,7 @@ function renderDayStatus() {
         <div class="next-meal-name">${escHtml(nm.recipe_name)}</div>
         <div class="next-meal-reason">${escHtml(nm.reason)}</div>
         <div class="next-meal-actions">
-          <button class="btn-confirm-meal" data-action="commit" data-slot-id="${nm.slot_id}">${icon("check-circle", 16)} Bestaetigen</button>
+          <button class="btn-confirm-meal" data-action="commit" data-slot-id="${nm.slot_id}">${icon("check-circle", 16)} Bestätigen</button>
           <button class="btn-swap-icon" data-action="swap" data-slot-id="${nm.slot_id}" title="Tauschen">${icon("refresh-cw", 16)}</button>
         </div>
       </div>`;
@@ -808,7 +813,7 @@ function renderNutrientDeficits() {
 
   return `
     <section class="deficit-section">
-      <h2>${icon("alert-triangle", 18)} Naehrstoff-Defizite</h2>
+      <h2>${icon("alert-triangle", 18)} Nährstoff-Defizite</h2>
       <div class="deficit-card">${items}</div>
     </section>`;
 }
@@ -995,7 +1000,7 @@ function renderSlots() {
 
         // Pin badge
         const pinBadge = s.pinned
-          ? `<span class="pin-badge" title="Manuell gewaehlt">${icon("pin", 12)}</span>`
+          ? `<span class="pin-badge" title="Manuell gewählt">${icon("pin", 12)}</span>`
           : "";
 
         // Slot status badge
@@ -1059,7 +1064,7 @@ function renderSlots() {
           if (s.slot_status === "replace_recommended") {
             actions = `
             <div class="meal-actions">
-              <button class="btn-swap-primary" data-action="swap" data-slot-id="${s.id}">${icon("refresh-cw", 14)} Alternative waehlen</button>
+              <button class="btn-swap-primary" data-action="swap" data-slot-id="${s.id}">${icon("refresh-cw", 14)} Alternative wählen</button>
             </div>`;
           } else {
             actions = `
@@ -1083,7 +1088,7 @@ function renderSlots() {
       })
       .join("");
   } else {
-    cards = '<p style="color:var(--fg-muted)">Keine Mahlzeiten fuer diesen Tag.</p>';
+    cards = '<p style="color:var(--fg-muted)">Keine Mahlzeiten für diesen Tag.</p>';
   }
 
   return `
@@ -1180,7 +1185,7 @@ function renderStockIndicator() {
   // Aussage ueber den Vorrat, wo gar keine Messung vorlag. Der Balken bleibt
   // in dem Fall weg, statt eine Zahl zu behaupten.
   if (!state.days_of_food_belastbar) {
-    const grund = state.days_of_food_grund || "Keine Angabe verfuegbar.";
+    const grund = state.days_of_food_grund || "Keine Angabe verfügbar.";
     return `
     <section class="stock-indicator">
       <h2>${icon("shopping-cart", 18)} Vorrat</h2>

@@ -114,13 +114,13 @@
   {% if muss_weg.abgelaufen %}
   <p class="muss-weg-fuss">
     {{ muss_weg.abgelaufen }} davon {% if muss_weg.abgelaufen == 1 %}ist{% else %}sind{% endif %}
-    bereits ueber dem Datum und {% if muss_weg.abgelaufen == 1 %}gehoert{% else %}gehoeren{% endif %}
+    bereits über dem Datum und {% if muss_weg.abgelaufen == 1 %}gehört{% else %}gehoeren{% endif %}
     nicht mehr in ein Gericht, sondern aus dem Bestand.
   </p>
   {% endif %}
   {% else %}
   <p style="color:var(--fg-muted);margin-top:1rem">
-    Nichts laeuft in den naechsten {{ muss_weg.vorschau_tage }} Tagen ab.
+    Nichts laeuft in den nächsten {{ muss_weg.vorschau_tage }} Tagen ab.
   </p>
   {% endif %}
 </section>
@@ -129,7 +129,7 @@
 <section id="einkaufsliste" style="margin-top:2rem">
   <h2>
     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;margin-right:0.35rem"><circle cx="8" cy="21" r="1"/><circle cx="19" cy="21" r="1"/><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"/></svg>
-    Einkaufsliste fuer die Woche
+    Einkaufsliste für die Woche
   </h2>
 
   {% if shopping_items %}
@@ -173,7 +173,7 @@
   {% endif %}
 </section>
 
-<p style="margin-top:1.5rem"><a href="/">Zurueck zum Dashboard</a></p>
+<p style="margin-top:1.5rem"><a href="/">Zurück zum Dashboard</a></p>
 
 <script>
 document.getElementById('plan-week-form').addEventListener('submit', function(e) {
