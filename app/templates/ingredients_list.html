@@ -1,0 +1,154 @@
+{% extends "base.html" %}
+{% block title %}Zutaten verwalten{% endblock %}
+{% block content %}
+<h1>Zutaten verwalten</h1>
+
+{% if flash %}
+<div class="flash">{{ flash }}</div>
+{% endif %}
+
+<p style="color:var(--fg-muted);margin-bottom:1rem">Allergene für jede Zutat pflegen. Diese werden bei der Rezeptplanung berücksichtigt.</p>
+
+{#
+  Was im Lager liegt und hier keine Zutat hat. Stand bis zum 2026-10-24
+  auf keiner Fläche: der Abgleich lief nur über die Zutaten und konnte ein
+  Produkt ohne Zutat nicht erreichen. Gemessen waren das 6 von 20 Produkten,
+  alle 6 mit Bestand, darunter Mehl, Salz, Zucker und Karotten.
+
+  Der Abschnitt steht ÜBER der Tabelle, weil er eine Handlung anbietet und
+  die Tabelle nur einen Zustand zeigt.
+#}
+{% if fehlende_produkte %}
+<div class="glass-card" style="margin-bottom:1.5rem">
+  <h2 style="margin-top:0;font-size:1.05rem">Im Lager vorhanden, hier unbekannt</h2>
+  <p style="color:var(--fg-muted);font-size:0.85rem">
+    Diese Sorten liegen im Lager, es gibt hier aber keine Zutat dafür. Ohne
+    Zutat kann kein Rezept sie verwenden, und ihr Vorrat zählt bei der
+    Einkaufsliste nicht mit. Übernehmen legt die Zutat hier an und verknüpft
+    sie; im Lager entsteht dabei nichts.
+  </p>
+  <table>
+    <thead>
+      <tr>
+        <th>Sorte</th>
+        <th>Kategorie</th>
+        <th>Im Vorrat</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for p in fehlende_produkte %}
+      <tr data-produkt-zeile="{{ p.lager_product_id }}">
+        <td>{{ p.lager_product_name }}</td>
+        <td>{{ p.kategorie or "-" }}</td>
+        <td>
+          {% if p.bestand is none %}
+            <span style="color:var(--fg-muted);font-size:0.8rem">nicht gemessen</span>
+          {% elif p.bestand > 0 %}
+            {{ p.bestand | round(0) | int }} {{ p.lager_unit or "" }}
+          {% else %}
+            <span style="color:var(--fg-muted);font-size:0.8rem">leer</span>
+          {% endif %}
+        </td>
+        <td>
+          <button type="button" class="btn-secondary btn-uebernehmen"
+                  style="font-size:0.8rem;padding:0.25rem 0.5rem"
+                  data-produkt-id="{{ p.lager_product_id }}">Übernehmen</button>
+        </td>
+      </tr>
+      <tr class="zeile-fehler" data-fehler-fuer="{{ p.lager_product_id }}" hidden>
+        <td colspan="4" style="color:var(--akzent-warn, #c0392b);font-size:0.85rem"></td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% elif lager_gefragt %}
+<p style="color:var(--fg-muted);font-size:0.85rem;margin-bottom:1rem">
+  Jede Sorte im Lager hat hier eine Zutat.
+</p>
+{% else %}
+{# "Nicht gefragt" ist nicht "nichts gefunden". Ein Lager-Ausfall darf sich
+   nicht als vollständige Abdeckung lesen. #}
+<p style="color:var(--fg-muted);font-size:0.85rem;margin-bottom:1rem">
+  Lager nicht erreichbar. Ob dort Sorten ohne Zutat liegen, ist damit ungeprüft.
+</p>
+{% endif %}
+
+{% if ingredients %}
+<div class="glass-card" style="padding:0;overflow:hidden">
+  <table>
+    <thead>
+      <tr>
+        <th>Zutat</th>
+        <th>Kategorie</th>
+        <th>Allergene</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for ing in ingredients %}
+      <tr>
+        <td>{{ ing.name_canonical }}</td>
+        <td>{{ ing.category or "-" }}</td>
+        <td>
+          {% if ing.allergens %}
+            {% for a in ing.allergens %}
+            <span class="allergen-badge allergen-badge-sm">{{ a }}</span>
+            {% endfor %}
+          {% else %}
+          <span style="color:var(--fg-muted);font-size:0.8rem">Keine</span>
+          {% endif %}
+        </td>
+        <td>
+          <a href="/zutaten/{{ ing.id }}/allergene" class="btn-secondary" style="font-size:0.8rem;padding:0.25rem 0.5rem">Bearbeiten</a>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+<p style="color:var(--fg-muted)">Keine Zutaten vorhanden.</p>
+{% endif %}
+
+<p style="margin-top:1rem"><a href="/rezepte">Zurück zu Rezepte</a></p>
+
+<script>
+// Übernahme einer Lager-Sorte als Zutat. Der Fehlerfall bleibt an der Zeile
+// stehen, statt die Seite neu zu laden: die beiden möglichen Absagen nennen
+// jeweils eine andere Zutat, und die will man dort lesen, wo sie gilt. Gleiche
+// Form wie beim Abhaken in shopping.html.
+(function () {
+  document.querySelectorAll('.btn-uebernehmen').forEach(function (knopf) {
+    knopf.addEventListener('click', async function () {
+      const id = knopf.dataset.produktId;
+      const fehlerZeile = document.querySelector('[data-fehler-fuer="' + id + '"]');
+      const fehlerFeld = fehlerZeile.querySelector('td');
+      knopf.disabled = true;
+      fehlerZeile.hidden = true;
+      try {
+        const antwort = await fetch('/inventory/zutat-aus-lager', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ lager_product_ids: [Number(id)] }),
+        });
+        if (!antwort.ok) {
+          let text = 'Fehlgeschlagen (' + antwort.status + ')';
+          try {
+            const daten = await antwort.json();
+            text = daten.error || daten.detail || text;
+          } catch (e) { /* Antwort ohne JSON-Körper */ }
+          throw new Error(text);
+        }
+        window.location.reload();
+      } catch (e) {
+        fehlerFeld.textContent = e.message;
+        fehlerZeile.hidden = false;
+        knopf.disabled = false;
+      }
+    });
+  });
+})();
+</script>
+{% endblock %}
